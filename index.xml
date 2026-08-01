@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <index version="1" name="Jay-JayDev">
   <category name="ReaMenu Helper">
-    <reapack name="Jay-JayDev_Apri ReaMenuHelper.lua" type="script" desc="ReaMenu Helper - drag-and-drop editor for REAPER's menus">
+    <reapack name="Jay-JayDev_Open ReaMenuHelper.lua" type="script" desc="ReaMenu Helper - drag-and-drop editor for REAPER's menus">
       <metadata>
         <description>Drag-and-drop editor for REAPER's menus (main menu and context menus), replacing the native editor. Launches ReaMenuHelper.html in your default browser. Project in Beta.</description>
         <link rel="website">https://github.com/Jay-JayDev/ReaMenuHelper</link>
       </metadata>
+      <version name="0.1.0-beta4" author="Jay-JayDev" time="2026-08-01T18:00:00Z">
+        <changelog>Renamed the launcher script from "Jay-JayDev_Apri ReaMenuHelper.lua" to "Jay-JayDev_Open ReaMenuHelper.lua" — it was still Italian ("Apri" = "Open") despite the rest of the UI being translated to English.</changelog>
+        <source file="Jay-JayDev_Open ReaMenuHelper.lua" main="main">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta4/Jay-JayDev_Open%20ReaMenuHelper.lua</source>
+        <source file="ReaMenuHelper.html">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta4/ReaMenuHelper.html</source>
+        <source file="Data/REAPER_DefaultAction.lst">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta4/Data/REAPER_DefaultAction.lst</source>
+        <source file="Data/default-menu-templates.js">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta4/Data/default-menu-templates.js</source>
+        <source file="Data/help-content.js">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta4/Data/help-content.js</source>
+      </version>
       <version name="0.1.0-beta3" author="Jay-JayDev" time="2026-08-01T17:00:00Z">
         <changelog>Fix: the data folder is now looked up in Scripts\Jay-JayDev\ReaMenu Helper\Data, the real path where ReaPack installs the package (non-empty category, as required by ReaPack). Fixes the "Data folder not found" and "empty category name" errors. UI fully translated to English.</changelog>
         <source file="Jay-JayDev_Apri ReaMenuHelper.lua" main="main">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta3/Jay-JayDev_Apri%20ReaMenuHelper.lua</source>

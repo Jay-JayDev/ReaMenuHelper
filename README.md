@@ -30,7 +30,7 @@ Install via **ReaPack**:
    https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/main/index.xml
    ```
 3. Extensions → ReaPack → Browse packages, search for "ReaMenu Helper" and install.
-4. The script appears in the Action List as **"Jay-JayDev_Apri ReaMenuHelper"**: run it to open the app in your browser.
+4. The script appears in the Action List as **"Jay-JayDev_Open ReaMenuHelper"**: run it to open the app in your browser.
 
 ## How to use it
 
@@ -43,7 +43,7 @@ For the full list of features, check the **❓ Help** button inside the app.
 
 ```
 ReaMenuHelper.html                     ← the app (open this file)
-Jay-JayDev_Apri ReaMenuHelper.lua      ← optional launcher from REAPER
+Jay-JayDev_Open ReaMenuHelper.lua      ← optional launcher from REAPER
 Data/                                  ← data used by the app at runtime
 dev-tools/                             ← internal dev tools, not needed for regular use
 ```
