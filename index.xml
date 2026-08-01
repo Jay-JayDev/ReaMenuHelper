@@ -8,7 +8,7 @@
       </metadata>
       <version name="0.1.0-beta3" author="Jay-JayDev" time="2026-08-01T17:00:00Z">
         <changelog>Fix: the data folder is now looked up in Scripts\Jay-JayDev\ReaMenu Helper\Data, the real path where ReaPack installs the package (non-empty category, as required by ReaPack). Fixes the "Data folder not found" and "empty category name" errors. UI fully translated to English.</changelog>
-        <source file="Jay-JayDev_Apri ReaMenuHelper.lua">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta3/Jay-JayDev_Apri%20ReaMenuHelper.lua</source>
+        <source file="Jay-JayDev_Apri ReaMenuHelper.lua" main="main">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta3/Jay-JayDev_Apri%20ReaMenuHelper.lua</source>
         <source file="ReaMenuHelper.html">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta3/ReaMenuHelper.html</source>
         <source file="Data/REAPER_DefaultAction.lst">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta3/Data/REAPER_DefaultAction.lst</source>
         <source file="Data/default-menu-templates.js">https://raw.githubusercontent.com/Jay-JayDev/ReaMenuHelper/v0.1.0-beta3/Data/default-menu-templates.js</source>
