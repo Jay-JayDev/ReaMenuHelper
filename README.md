@@ -22,7 +22,7 @@ Drag-and-drop editor for REAPER's menus (main menu and context menus), replacing
 
 ## Installation
 
-Currently the only supported method is via **ReaPack**:
+Install via **ReaPack**:
 
 1. In REAPER: Extensions → ReaPack → Import a repository...
 2. Paste this URL:
