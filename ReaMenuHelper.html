@@ -1,0 +1,2227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReaMenu Helper (Beta)</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0f1424;
+  --bg-panel: #161c33;
+  --bg-card: #1b2140;
+  --bg-card-hover: #212952;
+  --border: #262e52;
+  --text: #e7eaf6;
+  --text-dim: #8891b5;
+  --accent: #4f7cff;
+  --accent-2: #2f3a6b;
+  --native: #3b82f6;
+  --custom: #22c55e;
+  --group: #a855f7;
+  --sep: #64748b;
+  --header: #f59e0b;
+  --submenu: #14b8a6;
+  --reserved: #d97706;
+  --danger: #ef4444;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:'Segoe UI', Inter, system-ui, sans-serif; user-select:none; -webkit-user-select:none; }
+input, textarea, select { user-select:text; -webkit-user-select:text; }
+* { scrollbar-color: var(--accent-2) var(--bg-panel); scrollbar-width: thin; }
+::-webkit-scrollbar { width:12px; height:12px; }
+::-webkit-scrollbar-track { background:var(--bg-panel); }
+::-webkit-scrollbar-thumb { background:var(--accent-2); border-radius:8px; border:2px solid var(--bg-panel); }
+::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+::-webkit-scrollbar-corner { background:var(--bg-panel); }
+button, input, select { font-family: inherit; }
+#app { display:flex; flex-direction:column; height:100vh; }
+
+#restore-banner, #fsa-warning { display:none; align-items:center; gap:12px; padding:10px 20px; font-size:13px; }
+#restore-banner { background:#3a2f0f; border-bottom:1px solid #6b5a1e; }
+#fsa-warning { background:#3a1f1f; border-bottom:1px solid #6b2e2e; }
+
+#topbar { display:flex; align-items:center; gap:10px; padding:4px 16px; background:var(--bg-panel); border-bottom:1px solid var(--border); flex-shrink:0; flex-wrap:wrap; }
+.brand { font-weight:700; font-size:15px; margin-right:40px; display:flex; align-items:center; gap:8px; }
+.spacer { flex:1; }
+.dir-control { display:inline-flex; align-items:stretch; }
+#export-control { position:relative; }
+.export-dropdown { display:none; flex-direction:column; position:absolute; top:100%; left:0; margin-top:4px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.5); z-index:60; min-width:280px; overflow:hidden;}
+.export-dropdown.open { display:flex; }
+.export-dropdown button { background:transparent; border:none; color:var(--text); text-align:left; padding:10px 14px; font-size:13px; cursor:pointer; white-space:nowrap; }
+.export-dropdown button:hover { background:var(--bg-card-hover); }
+.export-dropdown-sep { height:1px; background:var(--border); margin:4px 0; }
+.palette-sep { height:1px; background:var(--border); margin:10px 0; }
+.dir-control .btn-secondary { border-top-right-radius:0; border-bottom-right-radius:0; }
+.file-tag-drop { display:flex; align-items:center; box-sizing:border-box; font-size:11px; color:var(--text-dim); background:var(--bg-card); padding:0 10px; border-radius:0 8px 8px 0; border:1px solid var(--border); border-left:none; width:220px; flex-shrink:0; overflow:hidden;text-overflow:ellipsis; white-space:nowrap; }
+.file-tag-drop.needs-reconfirm { color:var(--header); border-color:var(--header); background:rgba(245,158,11,.12); cursor:pointer; }
+#dirty-dot { position:absolute; top:-3px; right:-3px; width:10px; height:10px; border-radius:50%; background:#f59e0b; border:2px solid var(--bg-panel); visibility:hidden; pointer-events:none; z-index:10; }
+.btn-primary, .btn-secondary, .btn-back { border:none; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-weight:600; }
+.btn-primary { background:var(--accent); color:white; }
+button:disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
+.btn-primary:hover { background:#6a90ff; }
+.btn-import { border:none; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-weight:600; background:var(--header); color:#1a1206; }
+.btn-import:hover { background:#ffb945; }
+.btn-secondary { background:var(--bg-card); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--bg-card-hover); }
+.btn-back { background:var(--bg-card); color:var(--text-dim); }
+
+#main { flex:1; display:flex; overflow:hidden; position:relative; }
+#dir-required-overlay { position:absolute; inset:0; z-index:500; background:rgba(15,20,36,.92); display:none; align-items:center; justify-content:center; padding:40px; text-align:center; }
+#dir-required-overlay.active { display:flex; }
+.dir-required-box { max-width:420px; }
+.dir-required-title { font-size:20px; font-weight:700; margin-bottom:10px; }
+.dir-required-text { color:var(--text-dim); font-size:14px; line-height:1.6; }
+@keyframes dir-btn-blink { 0%, 100% { box-shadow:0 0 0 0 rgba(79,124,255,.65); } 50% { box-shadow:0 0 0 9px rgba(79,124,255,0); } }
+#reaper-dir-control.blink { border-radius:8px; animation:dir-btn-blink 1.4s ease-in-out infinite; }
+#btn-new-section.blink { animation:dir-btn-blink 1.4s ease-in-out infinite; }
+#btn-export-menu.blink { animation:dir-btn-blink 1.4s ease-in-out infinite; }
+#editor-view { flex:1; display:flex; overflow:hidden;}
+
+#sidebar-wrap { position:relative; flex-shrink:0; display:flex; }
+#sidebar { width:310px; flex-shrink:0; background:var(--bg-panel); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:14px; overflow:auto; transition:width .15s, padding .15s; }
+#sidebar.collapsed { width:0; padding:0; overflow:hidden;border-right:none; }
+#palette-wrap { position:relative; flex-shrink:0; display:flex; }
+.panel-toggle { position:absolute; bottom:16px; z-index:30; width:20px; height:20px; border-radius:5px; background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1; font-weight:700; padding:0; }
+.panel-toggle:hover { color:var(--accent); border-color:var(--accent); }
+#sidebar-toggle { right:-14px; }
+#palette-toggle { left:-14px; }
+#sidebar h3 { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin:0 0 10px; }
+.search-input { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:13px; margin-bottom:10px; }
+.section-item { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 10px; border-radius:8px; font-size:13px; cursor:pointer; color:var(--text-dim); margin-bottom:2px; }
+.section-item-label { overflow:hidden;text-overflow:ellipsis; white-space:nowrap; flex:1; }
+.section-item-delete { flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; overflow:visible;background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:25px; line-height:1; padding:0; border-radius:4px; opacity:1; filter:brightness(1.6); }
+.section-item-delete:hover { opacity:1; color:var(--danger); background:rgba(239,68,68,.18); }
+.section-item:hover { background:var(--bg-card); color:var(--text); }
+.section-item.active { background:var(--accent-2); color:#fff; }
+
+#canvas-panel { flex:1; display:flex; flex-direction:column; overflow:hidden;background:var(--bg); min-width:0; }
+#canvas-panel.disabled { opacity:.15; pointer-events:none; }
+#canvas-breadcrumb { display:flex; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid var(--border); }
+.breadcrumb-label { font-size:14px; font-weight:600; }
+#canvas-root { flex:1; overflow:auto; padding:18px 22px; }
+.canvas-empty { color:var(--text-dim); text-align:center; padding:60px 20px; border:2px dashed var(--border); border-radius:var(--radius); }
+.canvas-empty.blink { animation:dir-btn-blink 1.4s ease-in-out infinite; }
+
+.block { margin-bottom:6px; }
+.block-row { display:flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:8px 10px; transition:background .12s; }
+.block-row:hover { background:var(--bg-card-hover); }
+.block-readonly .block-row { opacity:.65; }
+.drag-handle { cursor:grab; color:var(--text-dim); font-size:14px; touch-action:none; user-select:none; -webkit-user-drag:none; }
+.badge { font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 7px; border-radius:5px; letter-spacing:.03em; flex-shrink:0; }
+.badge-native { background:rgba(59,130,246,.18); color:var(--native); }
+.badge-custom { background:rgba(34,197,94,.18); color:var(--custom); }
+.badge-group { background:rgba(168,85,247,.18); color:var(--group); }
+.badge-separator { background:rgba(100,116,139,.18); color:var(--sep); }
+.badge-reserved { background:rgba(217,119,6,.18); color:var(--reserved); }
+.badge-header { background:rgba(245,158,11,.18); color:var(--header); }
+.badge-review { background:rgba(239,68,68,.2); color:var(--danger); }
+.block-header:has(.badge-review) .block-row { border-color:var(--danger); }
+.badge-submenu { background:rgba(20,184,166,.18); color:var(--submenu); }
+.block-label { font-size:13px; flex:1; overflow:hidden;text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.cmd-id { font-size:11px; color:var(--text-dim); font-family:Consolas,monospace; background:var(--bg); padding:2px 6px; border-radius:5px; flex-shrink:0; max-width:160px; overflow:hidden;text-overflow:ellipsis; white-space:nowrap; }
+.icon-btn { background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:13px; padding:4px 6px; border-radius:6px; flex-shrink:0; }
+.icon-btn:hover { background:var(--bg); color:var(--text); }
+.icon-btn-trash { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; overflow:visible;font-size:25px; line-height:1; padding:0; opacity:1; filter:brightness(1.6); }
+.icon-btn-trash:hover { opacity:1; color:var(--danger); background:rgba(239,68,68,.18); }
+.chevron { cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:12px; padding:2px 6px; flex-shrink:0; user-select:none; }
+.chevron.icon-static { cursor:default; }
+.chevron:hover { opacity:.7; }
+.chevron.icon-static:hover { opacity:1; }
+.block-children { margin-left:14px; margin-top:6px; padding-left:12px; border-left:2px solid var(--border); }
+.block-children.collapsed { display:none; }
+.block-children.readonly { opacity:.75; }
+.block-row.has-preview { border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom-color:rgba(168,85,247,.35); }
+.group-preview-wrap { margin-top:0; padding:6px; background:rgba(168,85,247,.07); border:1px dashed var(--border); border-top:none; border-radius:0 0 8px 8px; }
+.children-placeholder { font-size:12px; color:var(--text-dim); padding:8px; border:1px dashed var(--border); border-radius:8px; }
+.inline-edit { font-size:13px; flex:1; background:var(--bg); border:1px solid var(--accent); border-radius:5px; padding:3px 6px; color:var(--text); min-width:0; }
+
+.drop-hover-inside .block-row { outline:2px solid var(--accent); outline-offset:2px; }
+.drop-hover-root { outline:2px dashed var(--accent) !important; outline-offset:-6px; border-radius:8px; }
+#drop-line { position:fixed; height:3px; background:var(--accent); border-radius:2px; pointer-events:none; z-index:500; display:none; box-shadow:0 0 8px var(--accent); }
+
+.drag-ghost { position:fixed; z-index:9999; pointer-events:none; background:var(--accent); color:#fff; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; box-shadow:0 6px 20px rgba(0,0,0,.4); max-width:260px; overflow:hidden;text-overflow:ellipsis; white-space:nowrap; }
+.drag-ghost.copy-mode { background:var(--custom); }
+.drag-ghost.copy-mode::before { content:"+ copia  "; opacity:.85; }
+body.dragging { cursor:grabbing; user-select:none; }
+
+#palette { width:400px; flex-shrink:0; background:var(--bg-panel); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden;transition:width .15s; }
+#palette.collapsed { width:0; border-left:none; }
+.palette-tabs { display:flex; border-bottom:1px solid var(--border); }
+.palette-tab { flex:1; background:transparent; border:none; color:var(--text-dim); padding:12px 4px; font-size:10.5px; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; }
+.palette-tab.active { color:var(--text); border-bottom-color:var(--accent); }
+#palette-search-wrap { padding:12px 12px 0; }
+#palette-body { flex:1; overflow:auto; padding:12px; }
+.palette-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:9px 10px; margin-bottom:8px; cursor:grab; display:flex; align-items:center; gap:8px; flex-wrap:wrap; user-select:none; -webkit-user-drag:none; }
+.palette-card.disabled { opacity:.35; cursor:not-allowed; }
+.palette-card:hover { background:var(--bg-card-hover); }
+.card-title { font-size:12.5px; flex:1; }
+.card-sub { font-size:11px; color:var(--text-dim); width:100%; }
+.group-card { display:block; cursor:pointer; }
+.palette-note { font-size:12px; color:var(--text-dim); padding:10px; text-align:left; line-height:1.6; }
+.palette-note code { background:var(--bg); color:var(--text); padding:1px 5px; border-radius:4px; font-family:Consolas,monospace; }
+.manual-add { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border); }
+.manual-add input { padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px; }
+
+#toast-container { position:fixed; bottom:16px; right:16px; display:flex; flex-direction:column; gap:8px; z-index:10000; }
+.toast { display:flex; align-items:flex-start; gap:8px; background:var(--bg-card); border:1px solid var(--border); padding:10px 10px 10px 16px; border-radius:8px; font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,.4); transition:opacity .4s; max-width:520px; opacity:.98; }
+.toast-text { flex:1; }
+.toast-close { flex-shrink:0; background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:16px; line-height:1; padding:0 2px; }
+.toast-close:hover { color:var(--text); }
+.toast-success { border-color:var(--custom); }
+.toast-error { border-color:var(--danger); animation:toast-blink 0.8s ease-in-out infinite; }
+@keyframes toast-blink { 0%, 100% { background:var(--bg-card); } 50% { background:#6b1f1f; } }
+.toast.fade { opacity:0; }
+
+#flyout-overlay { position:fixed; inset:0; z-index:9998; display:none; }
+.modal-overlay { position:fixed; inset:0; z-index:9997; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); }
+.modal-overlay.open { display:flex; }
+.modal-box { background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:20px; width:360px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+.help-box { position:relative; width:min(760px, 92vw); max-height:86vh; overflow-y:auto; }
+.help-close { position:absolute; top:12px; right:14px; background:transparent; border:none; color:var(--text-dim); font-size:22px; line-height:1; cursor:pointer; padding:4px 8px; border-radius:6px; }
+.help-close:hover { background:var(--bg-card); color:var(--text); }
+#help-content h2 { font-size:18px; margin:0 0 4px; }
+#help-content h3 { font-size:14px; color:var(--accent); margin:22px 0 8px; }
+#help-content p { color:var(--text-dim); font-size:13px; line-height:1.6; margin:6px 0; }
+#help-content table { border-collapse:collapse; width:100%; margin:8px 0 4px; font-size:13px; }
+#help-content th { text-align:left; color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:.03em; padding:6px 10px; border-bottom:1px solid var(--border); }
+#help-content td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+#help-content td:first-child { color:var(--accent); font-weight:700; white-space:nowrap; width:1%; }
+#help-content code { background:var(--bg-card); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:12px; }
+.modal-box h3 { margin:0 0 8px; font-size:15px; }
+.modal-hint { font-size:12px; color:var(--text-dim); margin:0 0 12px; line-height:1.5; }
+.modal-box select, .modal-box input[type="text"] { width:100%; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:13px; margin-bottom:14px; box-sizing:border-box; }
+.modal-box select {
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  padding-right:30px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238891b5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+}
+.modal-box select:disabled { background-color:var(--bg-card); opacity:.4; }
+.modal-actions { display:flex; justify-content:flex-end; gap:8px; }
+#flyout-overlay.active { display:block; }
+.flyout-menu { position:absolute; background:#1b2140; border:1px solid var(--border); border-radius:8px; padding:6px; min-width:220px; box-shadow:0 10px 30px rgba(0,0,0,.5); z-index:9999; max-height:calc(100vh - 16px); overflow-y:auto; }
+.flyout-root { position:fixed; }
+.flyout-item { position:relative; padding:7px 10px; font-size:13px; border-radius:6px; cursor:default; white-space:nowrap; }
+.flyout-item:hover { background:var(--accent-2); }
+.flyout-sep { height:1px; background:var(--border); margin:5px 4px; }
+.flyout-header { font-size:11px; color:var(--text-dim); text-transform:uppercase; padding:6px 10px 2px; }
+.flyout-sub { display:none; position:absolute; left:100%; top:-6px; }
+.flyout-sub.open { display:block; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="restore-banner">
+    <span id="restore-text"></span>
+    <button class="btn-primary" id="restore-yes">Recover</button>
+    <button class="btn-secondary" id="restore-discard">Discard</button>
+  </div>
+  <div id="fsa-warning">⚠️ Your browser doesn't support folder selection with write access: this tool requires a Chromium-based browser (Google Chrome, Microsoft Edge, Opera...) to work.</div>
+
+  <div id="topbar">
+    <div class="brand"><img id="btn-reset-all" src="data:image/png;base64,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" title="[DEVELOPER] Full reset: clears saved folders and session" style="cursor:pointer; vertical-align:middle;"> ReaMenu Helper <span style="font-size:11px; font-weight:normal; opacity:.6; vertical-align:middle;">BETA</span></div>
+    <div class="dir-control" id="reaper-dir-control">
+      <button class="btn-secondary" id="btn-set-reaper-dir">📁 REAPER Folder...</button>
+      <span class="file-tag-drop" id="reaper-dir-tag">Not set</span>
+    </div>
+    <button class="btn-import" id="btn-load-starter">📥 Import ReaperMenuSet</button>
+    <div class="dir-control" id="export-control">
+      <button class="btn-primary" id="btn-export-menu">💾 Export...</button>
+      <span id="dirty-dot" title="Unsaved changes"></span>
+      <div class="export-dropdown" id="export-dropdown">
+        <button data-action="default">💾 Export ReaperMenuSet (to Default Folder "%Reaper%\MenuSets")</button>
+        <div class="export-dropdown-sep"></div>
+        <button data-action="as-set">💾 Export as... (All Contexts)</button>
+        <button data-action="as-single">💾 Export as... (Current only)</button>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-secondary" id="btn-help">❓ Help</button>
+  </div>
+
+  <div id="main">
+    <div id="dir-required-overlay">
+      <div class="dir-required-box">
+        <div class="dir-required-title">Before you start</div>
+        <div class="dir-required-text">Choose your REAPER installation folder using the "📁 REAPER Folder..." button</div>
+      </div>
+    </div>
+    <div id="editor-view">
+      <div id="sidebar-wrap">
+        <div id="sidebar">
+          <h3>Menus / Context Menus</h3>
+          <input class="search-input" id="section-search" placeholder="Filter context...">
+          <div id="section-list"></div>
+          <button class="btn-secondary" id="btn-new-section" style="margin-top:10px; width:100%;">New context</button>
+        </div>
+        <button class="panel-toggle" id="sidebar-toggle" title="Collapse/expand panel">‹</button>
+      </div>
+      <div id="canvas-panel">
+        <div id="canvas-breadcrumb"></div>
+        <div id="canvas-root"></div>
+      </div>
+      <div id="palette-wrap">
+        <button class="panel-toggle" id="palette-toggle" title="Collapse/expand panel">›</button>
+        <div id="palette">
+          <div class="palette-tabs">
+            <button class="palette-tab active" data-tab="native">REAPER Actions</button>
+            <button class="palette-tab" data-tab="custom">Custom Actions</button>
+            <button class="palette-tab" data-tab="groups">Groups</button>
+            <button class="palette-tab" data-tab="elements">Elements</button>
+          </div>
+          <div id="palette-search-wrap">
+            <input class="search-input" id="palette-search" placeholder="Filter...">
+          </div>
+          <div id="palette-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <div id="flyout-overlay"></div>
+  <div id="help-overlay" class="modal-overlay">
+    <div class="modal-box help-box">
+      <button class="help-close" id="help-close" title="Close">×</button>
+      <div id="help-content"></div>
+    </div>
+  </div>
+  <div id="new-section-overlay" class="modal-overlay">
+    <div class="modal-box">
+      <h3>New context</h3>
+      <p class="modal-hint">Choose the real REAPER menu/context to create — only these names can later be imported correctly into REAPER.</p>
+      <select id="new-section-select"></select>
+      <p class="modal-hint" id="new-section-template-hint"></p>
+      <div class="modal-actions">
+        <button id="new-section-confirm" class="btn-primary">Create</button>
+        <button id="new-section-confirm-all" class="btn-secondary">Create All</button>
+        <button id="new-section-cancel" class="btn-secondary" style="margin-left:auto;">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="generic-modal-overlay" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="generic-modal-title"></h3>
+      <p class="modal-hint" id="generic-modal-message"></p>
+      <input type="text" id="generic-modal-input" style="display:none;">
+      <div class="modal-actions">
+        <button id="generic-modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="generic-modal-confirm" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+  <div id="drop-line"></div>
+</div>
+
+<script>
+'use strict';
+
+/* ===================== State ===================== */
+const state = {
+  sections: [],
+  groups: {},
+  currentSectionName: null,
+  editingGroupId: null,
+  reaperDirHandle: null,
+  reaperDirName: '',
+  pendingReaperDirHandle: null,
+  menuFileName: '',
+  menuFileRecovered: false,
+  dataDirHandle: null,
+  dataDirStatus: 'unknown',
+  groupsFileHandle: null,
+  groupsFileName: '',
+  nativeActions: [],
+  customActions: [],
+  dirty: false
+};
+
+const hasFSAccess = 'showOpenFilePicker' in window;
+const hasDirAccess = 'showDirectoryPicker' in window;
+let paletteTab = 'native';
+
+/* ===================== Node model ===================== */
+let _uidCounter = 0;
+function uid(prefix) { return (prefix || 'n') + '_' + Date.now().toString(36) + '_' + (_uidCounter++); }
+
+function newAction(command, text, kind, icon) { return { id: uid('a'), type: 'action', command: command, text: text || '', actionKind: kind, icon: icon || null }; }
+function newSeparator() { return { id: uid('s'), type: 'separator' }; }
+function newHeader(text) { return { id: uid('h'), type: 'header', text: text || 'New title' }; }
+function newSubmenu(text) { return { id: uid('m'), type: 'submenu', text: text || 'New submenu', children: [], _collapsed: false }; }
+function newGroupRef(groupId) { return { id: uid('g'), type: 'group', groupId: groupId }; }
+
+/* ===================== Tree utilities ===================== */
+function walkTree(items, visit) {
+  items.forEach(function (node) {
+    visit(node, items);
+    if (node.type === 'submenu' && node.children) walkTree(node.children, visit);
+  });
+}
+function findParentArray(rootItems, targetNode) {
+  if (rootItems.indexOf(targetNode) !== -1) return rootItems;
+  for (let i = 0; i < rootItems.length; i++) {
+    const node = rootItems[i];
+    if (node.type === 'submenu' && node.children) {
+      const found = findParentArray(node.children, targetNode);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+function findNodeById(rootItems, id) {
+  for (let i = 0; i < rootItems.length; i++) {
+    const node = rootItems[i];
+    if (node.id === id) return node;
+    if (node.type === 'submenu' && node.children) {
+      const found = findNodeById(node.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+function nodeContains(ancestor, target) {
+  if (!ancestor.children) return false;
+  for (let i = 0; i < ancestor.children.length; i++) {
+    const c = ancestor.children[i];
+    if (c === target) return true;
+    if (c.type === 'submenu' && nodeContains(c, target)) return true;
+  }
+  return false;
+}
+function removeGroupRefs(items, groupId) {
+  for (let i = items.length - 1; i >= 0; i--) {
+    const node = items[i];
+    if (node.type === 'group' && node.groupId === groupId) items.splice(i, 1);
+    else if (node.type === 'submenu' && node.children) removeGroupRefs(node.children, groupId);
+  }
+}
+function getActiveRootArray() {
+  if (state.editingGroupId) {
+    const g = state.groups[state.editingGroupId];
+    return g ? g.items : [];
+  }
+  const s = state.sections.find(function (s) { return s.name === state.currentSectionName; });
+  return s ? s.items : [];
+}
+function computeGroupUsage(groupId) {
+  const usedIn = [];
+  state.sections.forEach(function (sec) {
+    let found = false;
+    walkTree(sec.items, function (node) { if (node.type === 'group' && node.groupId === groupId) found = true; });
+    if (found) usedIn.push(sec.displayTitle || sec.name);
+  });
+  return usedIn;
+}
+
+/* ===================== REAPER menu ini parser / serializer ===================== */
+function parseReaperMenuIni(text) {
+  const rawLines = text.split(/\r\n|\n/);
+  const sectionBlocks = [];
+  let cur = null;
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    const secM = line.match(/^\[(.*)\]$/);
+    if (secM) { cur = { name: secM[1], lines: [] }; sectionBlocks.push(cur); continue; }
+    if (!cur) continue;
+    if (line.trim() === '') continue;
+    cur.lines.push(line);
+  }
+  return sectionBlocks.map(parseSectionBlock);
+}
+
+function parseSectionBlock(block) {
+  const section = { name: block.name, displayTitle: null, defaultHash: null, extraLines: [], items: [] };
+  const itemLines = [];
+  const iconLines = {};
+  for (let i = 0; i < block.lines.length; i++) {
+    const line = block.lines[i];
+    let m;
+    if ((m = line.match(/^default=(.*)$/))) { section.defaultHash = m[1]; continue; }
+    if ((m = line.match(/^title=(.*)$/))) { section.displayTitle = m[1]; continue; }
+    if ((m = line.match(/^item_(\d+)=(.*)$/))) { itemLines.push({ idx: parseInt(m[1], 10), raw: m[2] }); continue; }
+    if ((m = line.match(/^icon_(\d+)=(.*)$/))) { iconLines[parseInt(m[1], 10)] = m[2]; continue; }
+    section.extraLines.push(line);
+  }
+  itemLines.sort(function (a, b) { return a.idx - b.idx; });
+  const byIdx = {};
+  const stack = [section.items];
+  itemLines.forEach(function (entry) {
+    const node = parseItemValue(entry.raw);
+    if (node.type === '__end__') { if (stack.length > 1) stack.pop(); return; }
+    stack[stack.length - 1].push(node);
+    byIdx[entry.idx] = node;
+    if (node.type === 'submenu') stack.push(node.children);
+  });
+  Object.keys(iconLines).forEach(function (idxStr) {
+    const node = byIdx[idxStr];
+    if (node) node.icon = iconLines[idxStr];
+  });
+  return section;
+}
+
+function parseItemValue(rest) {
+  const sp = rest.indexOf(' ');
+  const cmd = sp === -1 ? rest : rest.slice(0, sp);
+  const text = sp === -1 ? '' : rest.slice(sp + 1);
+  if (cmd === '-1') return newSeparator();
+  if (cmd === '-2') return newSubmenu(text);
+  if (cmd === '-3') return { type: '__end__' };
+  if (cmd === '-4') return newHeader(text);
+  if (cmd.charAt(0) === '_') return newAction(cmd, cleanActionName(text), 'custom');
+  return newAction(cmd, cleanActionName(text), 'native');
+}
+
+function serializeSection(section) {
+  const lines = ['[' + section.name + ']'];
+  if (section.defaultHash != null) lines.push('default=' + section.defaultHash);
+  if (section.displayTitle != null) lines.push('title=' + section.displayTitle);
+  (section.extraLines || []).forEach(function (l) { lines.push(l); });
+  let idx = 0;
+  const iconLines = [];
+  function walk(items, visited) {
+    items.forEach(function (node) {
+      if (node.type === 'action') {
+        lines.push('item_' + idx + '=' + node.command + ' ' + (node.text || ''));
+        if (node.icon) iconLines.push('icon_' + idx + '=' + node.icon);
+        idx++;
+      } else if (node.type === 'separator') {
+        lines.push('item_' + idx + '=-1'); idx++;
+      } else if (node.type === 'header') {
+        lines.push('item_' + idx + '=-4 ' + (node.text || '')); idx++;
+      } else if (node.type === 'submenu') {
+        lines.push('item_' + idx + '=-2 ' + (node.text || '')); idx++;
+        walk(node.children, visited);
+        lines.push('item_' + idx + '=-3'); idx++;
+      } else if (node.type === 'group') {
+        if (visited.indexOf(node.groupId) !== -1) return;
+        const grp = state.groups[node.groupId];
+        if (grp) { walk(grp.items, visited.concat([node.groupId])); }
+      }
+    });
+  }
+  walk(section.items, []);
+  return lines.concat(iconLines).join('\n');
+}
+
+function serializeAllSections() {
+  return state.sections.filter(function (s) { return s.items.length > 0; }).map(serializeSection).join('\n\n') + '\n';
+}
+
+/* ===================== reaper-kb.ini / action-list parsers ===================== */
+function cleanActionName(name) {
+  return (name || '').replace(/^(Custom|Script):\s*/, '');
+}
+
+function parseReaperKb(text) {
+  const lines = text.split(/\r\n|\n/);
+  const actions = [];
+  const scrRe = /^SCR\s+\d+\s+\d+\s+(RS[0-9a-fA-F_]+)\s+"((?:[^"\\]|\\.)*)"/;
+  const actRe = /^ACT\s+\d+\s+\d+\s+"([0-9a-fA-F_]+)"\s+"((?:[^"\\]|\\.)*)"/;
+  const actReSingleQuote = /^ACT\s+\d+\s+\d+\s+"([0-9a-fA-F_]+)"\s+'([^']*)'/;
+  lines.forEach(function (line) {
+    let m = scrRe.exec(line);
+    if (m) { actions.push({ id: '_' + m[1], name: cleanActionName(m[2]) }); return; }
+    m = actRe.exec(line);
+    if (m) { actions.push({ id: '_' + m[1], name: cleanActionName(m[2]) }); return; }
+    m = actReSingleQuote.exec(line);
+    if (m) { actions.push({ id: '_' + m[1], name: cleanActionName(m[2]) }); return; }
+  });
+  return actions;
+}
+
+function parseActionListExport(text) {
+  const lines = text.split(/\r\n|\n/);
+  const actions = [];
+  lines.forEach(function (line) {
+    if (!line.trim()) return;
+    let parts = line.split('\t');
+    if (parts.length < 2) parts = line.split(/ {2,}/);
+    if (parts.length < 2) return;
+    if (parts[0] === 'Section' && parts[1] === 'Id') return;
+    let section, id, name;
+    if (parts.length >= 3) {
+      section = parts[0].trim();
+      id = parts[1].trim();
+      name = cleanActionName(parts.slice(2).join(' ').trim().replace(/^"|"$/g, ''));
+    } else {
+      section = 'Main';
+      id = parts[0].trim();
+      name = cleanActionName(parts.slice(1).join(' ').trim().replace(/^"|"$/g, ''));
+    }
+    if (id && name) actions.push({ id: id, name: name, section: section });
+  });
+  return actions;
+}
+
+/* ===================== IndexedDB autosave ===================== */
+const DB_NAME = 'reamenu_helper_db';
+const DB_STORE = 'autosave';
+function openDB() {
+  return new Promise(function (resolve, reject) {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = function () { req.result.createObjectStore(DB_STORE); };
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error); };
+  });
+}
+async function idbSet(key, value) {
+  const db = await openDB();
+  return new Promise(function (resolve, reject) {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).put(value, key);
+    tx.oncomplete = function () { resolve(); };
+    tx.onerror = function () { reject(tx.error); };
+  });
+}
+async function idbGet(key) {
+  const db = await openDB();
+  return new Promise(function (resolve, reject) {
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).get(key);
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error); };
+  });
+}
+
+const LS_SNAPSHOT_KEY = 'reamenu_helper_snapshot';
+const LS_CREATED_SECTION_KEY = 'reamenu_helper_created_section_once';
+const LS_ADDED_ITEM_KEY = 'reamenu_helper_added_item_once';
+let autosaveTimer = null;
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(doAutosave, 600);
+}
+function buildSnapshot() {
+  return {
+    sections: state.sections,
+    groups: state.groups,
+    currentSectionName: state.currentSectionName,
+    editingGroupId: state.editingGroupId,
+    menuFileName: state.menuFileName,
+    groupsFileName: state.groupsFileName,
+    savedAt: Date.now()
+  };
+}
+async function doAutosave() {
+  try { await idbSet('snapshot', buildSnapshot()); } catch (e) { console.error('autosave failed', e); }
+}
+// Rete di sicurezza per refresh/chiusura: IndexedDB è asincrono, il browser può interromperlo
+// a metà durante un unload. localStorage è sincrono, garantito completarsi prima che l'handler
+// finisca, quindi affidabile anche nell'ultimo istante prima che la pagina sparisca.
+function flushAutosaveSync() {
+  try { localStorage.setItem(LS_SNAPSHOT_KEY, JSON.stringify(buildSnapshot())); } catch (e) { /* ignore */ }
+  if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
+  doAutosave();
+}
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flushAutosaveSync(); });
+window.addEventListener('pagehide', flushAutosaveSync);
+async function tryRestoreAutosave() {
+  let idbSnap = null, lsSnap = null;
+  try { idbSnap = await idbGet('snapshot'); } catch (e) { console.warn('no idb autosave available', e); }
+  try {
+    const raw = localStorage.getItem(LS_SNAPSHOT_KEY);
+    if (raw) lsSnap = JSON.parse(raw);
+  } catch (e) { console.warn('no localStorage autosave available', e); }
+  const snap = (lsSnap && (!idbSnap || lsSnap.savedAt > idbSnap.savedAt)) ? lsSnap : idbSnap;
+  if (snap && snap.sections && snap.sections.length) showRestoreBanner(snap);
+}
+function showRestoreBanner(snap) {
+  const bar = document.getElementById('restore-banner');
+  bar.style.display = 'flex';
+  const sectionCount = (snap.sections || []).length;
+  const sectionSummary = sectionCount + (sectionCount === 1 ? ' context' : ' contexts');
+  document.getElementById('restore-text').textContent =
+    'Found a previous unsaved session (' + sectionSummary + ', groups: ' + Object.keys(snap.groups || {}).length + '). Recover it?';
+  document.getElementById('restore-yes').onclick = function () {
+    state.sections = snap.sections || [];
+    state.groups = snap.groups || {};
+    state.currentSectionName = snap.currentSectionName || (state.sections[0] && state.sections[0].name);
+    state.editingGroupId = snap.editingGroupId || null;
+    state.menuFileName = snap.menuFileName || '';
+    state.groupsFileName = snap.groupsFileName || '';
+    bar.style.display = 'none';
+    // Avviso "da salvare" solo se c'è davvero qualcosa di esportabile — altrimenti (es. contesti
+    // vuoti recuperati) il pulsante Export resta disabilitato e l'avviso "salva!" diventa un
+    // vicolo cieco senza modo di soddisfarlo.
+    if (hasExportableContent()) {
+      state.menuFileRecovered = true;
+      state.dirty = true;
+    }
+    renderAll();
+    if (state.menuFileRecovered) {
+      showToast('⚠️ WARNING!!! - Session Recovered - Not Saved Yet', 'error', true, 'recovered-warning');
+    } else {
+      showToast('Session recovered.', 'success');
+    }
+  };
+  document.getElementById('restore-discard').onclick = function () {
+    bar.style.display = 'none';
+    idbSet('snapshot', null);
+    try { localStorage.removeItem(LS_SNAPSHOT_KEY); } catch (e) { /* ignore */ }
+  };
+}
+
+/* ===================== Dirty / unload guard ===================== */
+function markDirty() { state.dirty = true; updateDirtyIndicator(); }
+function updateDirtyIndicator() {
+  document.getElementById('dirty-dot').style.visibility = state.dirty ? 'visible' : 'hidden';
+  const exportBtn = document.getElementById('btn-export-menu');
+  const canExport = hasExportableContent();
+  exportBtn.disabled = !canExport;
+  exportBtn.classList.toggle('blink', state.dirty && canExport);
+  const asSetBtn = document.querySelector('.export-dropdown [data-action="as-set"]');
+  if (asSetBtn) asSetBtn.disabled = state.sections.length <= 1;
+  const asSingleBtn = document.querySelector('.export-dropdown [data-action="as-single"]');
+  if (asSingleBtn) {
+    const current = state.sections.find(function (s) { return s.name === state.currentSectionName; });
+    asSingleBtn.disabled = !current || !current.items.length;
+  }
+}
+window.addEventListener('beforeunload', function (e) {
+  if (state.dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ===================== Toasts ===================== */
+function showToast(msg, type, persistent, key) {
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + (type || 'info');
+  if (key) t.dataset.key = key;
+  const text = document.createElement('span');
+  text.className = 'toast-text';
+  text.textContent = msg;
+  t.appendChild(text);
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.textContent = '×';
+  closeBtn.title = 'Close';
+  t.appendChild(closeBtn);
+  const container = document.getElementById('toast-container');
+  while (container.children.length >= 6) { container.removeChild(container.firstChild); }
+  container.appendChild(t);
+  function dismiss() {
+    clearTimeout(timer);
+    t.classList.add('fade');
+    setTimeout(function () { t.remove(); }, 400);
+  }
+  closeBtn.onclick = dismiss;
+  const timer = persistent ? null : setTimeout(dismiss, 20000);
+}
+function dismissToastByKey(key) {
+  document.querySelectorAll('#toast-container .toast[data-key="' + key + '"]').forEach(function (t) {
+    t.classList.add('fade');
+    setTimeout(function () { t.remove(); }, 400);
+  });
+}
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+/* ===================== File I/O (directory-based, ask-once) ===================== */
+function pickFileFallback(cb, accept) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = accept;
+  inp.onchange = function () { if (inp.files[0]) cb(inp.files[0]); };
+  inp.click();
+}
+function downloadTextFile(text, filename) {
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+}
+async function verifyPermission(handle) {
+  const opts = { mode: 'readwrite' };
+  try {
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if ((await handle.requestPermission(opts)) === 'granted') return true;
+  } catch (e) { /* handle may be stale (folder moved/deleted) */ }
+  return false;
+}
+
+function loadMenuText(text) {
+  state.sections = parseReaperMenuIni(text);
+  state.currentSectionName = state.sections.length ? state.sections[0].name : null;
+  state.editingGroupId = null;
+  state.dirty = false;
+  state.menuFileRecovered = false;
+  renderAll();
+  scheduleAutosave();
+}
+
+async function loadStarterFile() {
+  if (hasFSAccess) {
+    try {
+      const startDir = await getMenuSetsDirHandle();
+      const pickerOpts = { types: [
+        { description: 'REAPER Menu Set', accept: { 'application/x-reapermenuset': ['.ReaperMenuSet'] } },
+        { description: 'REAPER Menu (single context)', accept: { 'application/x-reapermenu': ['.ReaperMenu'] } }
+      ] };
+      if (startDir) pickerOpts.startIn = startDir;
+      const picked = await window.showOpenFilePicker(pickerOpts);
+      const file = await picked[0].getFile();
+      const text = await file.text();
+      state.menuFileName = file.name + ' (starter file)';
+      loadMenuText(text);
+      markDirty();
+      showToast('Starter file loaded (' + state.sections.length + ' contexts). Save it to write it into your REAPER folder.', 'success');
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      console.warn('showOpenFilePicker (starter) failed, falling back', e);
+    }
+  }
+  pickFileFallback(async function (file) {
+    const text = await file.text();
+    state.menuFileName = file.name + ' (starter file)';
+    loadMenuText(text);
+    markDirty();
+    showToast('Starter file loaded (' + state.sections.length + ' contexts). Save it to write it into your REAPER folder.', 'success');
+  }, '.ReaperMenuSet,.ReaperMenu');
+}
+
+async function setReaperDirectory() {
+  if (!hasDirAccess) { showToast('Your browser doesn\'t support folder selection (requires Edge or Chrome).', 'error'); return; }
+  if (state.pendingReaperDirHandle) {
+    try {
+      const status = await state.pendingReaperDirHandle.requestPermission({ mode: 'readwrite' });
+      if (status === 'granted') {
+        state.reaperDirHandle = state.pendingReaperDirHandle;
+        state.pendingReaperDirHandle = null;
+        state.reaperDirName = state.reaperDirHandle.name;
+        await autoDiscoverReaperFiles();
+        renderTopbar();
+        return;
+      }
+    } catch (e) { console.warn('reconfirm reaper dir failed, falling back to new picker', e); }
+  }
+  try {
+    const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+    state.reaperDirHandle = dir;
+    state.reaperDirName = dir.name;
+    state.pendingReaperDirHandle = null;
+    await idbSet('reaperDirHandle', dir);
+    await autoDiscoverReaperFiles();
+    renderTopbar();
+  } catch (e) { if (e && e.name !== 'AbortError') showToast('Folder access error: ' + e.message, 'error'); }
+}
+
+async function autoDiscoverReaperFiles() {
+  const dir = state.reaperDirHandle;
+  if (!dir) return;
+  await refreshCustomActions(true);
+  await autoLoadDataFolder();
+}
+
+async function getDataDirHandle() {
+  if (!state.reaperDirHandle) return null;
+  try {
+    const scriptsFolder = await state.reaperDirHandle.getDirectoryHandle('Scripts');
+    const authorFolder = await scriptsFolder.getDirectoryHandle('Jay-JayDev');
+    const appFolder = await authorFolder.getDirectoryHandle('ReaMenu Helper');
+    const dataFolder = await appFolder.getDirectoryHandle('Data');
+    return dataFolder;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function getMenuSetsDirHandle() {
+  if (!state.reaperDirHandle) return null;
+  try {
+    return await state.reaperDirHandle.getDirectoryHandle('MenuSets');
+  } catch (e) {
+    try {
+      return await state.reaperDirHandle.getDirectoryHandle('MenuSets', { create: true });
+    } catch (e2) {
+      return null;
+    }
+  }
+}
+
+async function refreshCustomActions(silent) {
+  const dir = state.reaperDirHandle;
+  if (!dir) { if (!silent) showToast('Set the REAPER folder first.', 'error'); return; }
+  try {
+    const kbHandle = await dir.getFileHandle('reaper-kb.ini');
+    const file = await kbHandle.getFile();
+    const text = await file.text();
+    state.customActions = parseReaperKb(text);
+    renderPalette();
+    showToast('Custom actions updated from reaper-kb.ini (' + state.customActions.length + ').', 'success');
+  } catch (e) {
+    if (!silent) showToast('reaper-kb.ini not found in this folder.', 'error');
+  }
+}
+
+async function saveMenuFile() {
+  if (!hasExportableContent()) {
+    showToast('There\'s no menu to export yet.', 'error');
+    return;
+  }
+  const text = serializeAllSections();
+  if (!state.reaperDirHandle || !hasDirAccess) {
+    showToast('Set the "REAPER Folder" first (button above) to be able to save.', 'error');
+    return;
+  }
+  try {
+    let menuSetDir;
+    try { menuSetDir = await state.reaperDirHandle.getDirectoryHandle('MenuSets'); }
+    catch (e) { menuSetDir = await state.reaperDirHandle.getDirectoryHandle('MenuSets', { create: true }); }
+    const outName = 'ReaMenuHelper_Defaults_' + formatTimestampForFilename() + '.ReaperMenuSet';
+    const outHandle = await menuSetDir.getFileHandle(outName, { create: true });
+    const writable = await outHandle.createWritable();
+    await writable.write(text);
+    await writable.close();
+    state.dirty = false;
+    state.menuFileRecovered = false;
+    updateDirtyIndicator();
+    renderTopbar();
+    dismissToastByKey('recovered-warning');
+    showToast('Saved to MenuSets/' + outName + ' — import it from REAPER (Customize menus/toolbars → Import).', 'success');
+  } catch (e) {
+    showToast('Error saving menu: ' + e.message, 'error');
+  }
+}
+
+function serializeCurrentSection() {
+  const s = state.sections.find(function (sec) { return sec.name === state.currentSectionName; });
+  return s ? serializeSection(s) + '\n' : '';
+}
+
+function formatTimestampForFilename() {
+  const d = new Date();
+  const pad = function (n) { return String(n).padStart(2, '0'); };
+  return pad(d.getDate()) + pad(d.getMonth() + 1) + d.getFullYear() + pad(d.getHours()) + pad(d.getMinutes());
+}
+
+async function saveMenuFileAs(scope) {
+  const single = scope === 'single';
+  if (single) {
+    const s = state.sections.find(function (sec) { return sec.name === state.currentSectionName; });
+    if (!s || !s.items.length) { showToast('The current context is empty, there\'s nothing to export.', 'error'); return; }
+  } else if (!hasExportableContent()) {
+    showToast('There\'s no menu to export yet.', 'error');
+    return;
+  }
+  const text = single ? serializeCurrentSection() : serializeAllSections();
+  const ext = single ? '.ReaperMenu' : '.ReaperMenuSet';
+  const baseName = single ? state.currentSectionName.replace(/[\\/:*?"<>|]/g, '_') : 'MyMenu';
+  const suggestedName = baseName + '_' + formatTimestampForFilename() + ext;
+  if (hasFSAccess) {
+    try {
+      const startDir = await getMenuSetsDirHandle();
+      const pickerOpts = {
+        suggestedName: suggestedName,
+        types: [{ description: single ? 'REAPER Menu' : 'REAPER Menu Set', accept: { 'application/x-reapermenu': [ext] } }]
+      };
+      if (startDir) pickerOpts.startIn = startDir;
+      const handle = await window.showSaveFilePicker(pickerOpts);
+      const writable = await handle.createWritable();
+      await writable.write(text);
+      await writable.close();
+      state.dirty = false;
+      state.menuFileRecovered = false;
+      updateDirtyIndicator();
+      dismissToastByKey('recovered-warning');
+      showToast('Saved as "' + handle.name + '".', 'success');
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      console.warn('showSaveFilePicker (as) failed, falling back to download', e);
+    }
+  }
+  downloadTextFile(text, suggestedName);
+  state.dirty = false;
+  state.menuFileRecovered = false;
+  updateDirtyIndicator();
+  dismissToastByKey('recovered-warning');
+  showToast('File downloaded (direct save not available in this browser).', 'success');
+}
+
+function loadGroupsText(text) {
+  const data = JSON.parse(text);
+  state.groups = {};
+  (data.groups || []).forEach(function (g) { state.groups[g.id] = g; });
+  renderAll();
+  scheduleAutosave();
+}
+function serializeGroups() { return JSON.stringify({ groups: Object.values(state.groups) }, null, 2); }
+
+async function autoLoadDataFolder() {
+  const dataDir = await getDataDirHandle();
+  state.dataDirHandle = dataDir;
+  state.dataDirStatus = dataDir ? 'found' : 'missing';
+  if (!dataDir) {
+    showToast('Folder "Scripts\\Jay-JayDev\\ReaMenu Helper\\Data" not found inside the chosen REAPER folder — reinstall/update the package from ReaPack.', 'error');
+    renderTopbar();
+    return;
+  }
+  try {
+    const gHandle = await dataDir.getFileHandle('reamenu-groups.json');
+    const file = await gHandle.getFile();
+    const text = await file.text();
+    state.groupsFileHandle = gHandle;
+    state.groupsFileName = 'Data/reamenu-groups.json';
+    loadGroupsText(text);
+  } catch (e) { /* not created yet, first save will create it */ }
+  await refreshNativeActions(true);
+  renderTopbar();
+}
+
+async function refreshNativeActions(silent) {
+  const dir = state.dataDirHandle || await getDataDirHandle();
+  if (!dir) { if (!silent) showToast('Data folder not found.', 'error'); return; }
+  try {
+    const aHandle = await dir.getFileHandle('REAPER_DefaultAction.lst');
+    const file = await aHandle.getFile();
+    const text = await file.text();
+    state.nativeActions = parseActionListExport(text);
+    renderPalette();
+    showToast('REAPER actions updated from REAPER_DefaultAction.lst (' + state.nativeActions.length + ').', 'success');
+  } catch (e) {
+    if (!silent) showToast('REAPER_DefaultAction.lst not found in the Data folder.', 'error');
+  }
+}
+
+async function saveGroupsFile() {
+  const text = serializeGroups();
+  const dataDir = state.dataDirHandle || await getDataDirHandle();
+  if (!dataDir || !hasDirAccess) {
+    showToast('Set the "REAPER Folder" first (button above) to be able to save groups.', 'error');
+    return;
+  }
+  try {
+    let handle = state.groupsFileHandle;
+    if (!handle) {
+      handle = await dataDir.getFileHandle('reamenu-groups.json', { create: true });
+      state.groupsFileHandle = handle;
+      state.groupsFileName = 'Data/reamenu-groups.json';
+    }
+    const writable = await handle.createWritable();
+    await writable.write(text);
+    await writable.close();
+    renderTopbar();
+    showToast('Groups saved.', 'success');
+  } catch (e) {
+    showToast('Error saving groups: ' + e.message, 'error');
+  }
+}
+
+async function resetEverything() {
+  const ok = await showConfirmModal('[DEVELOPER] Full reset: forget linked folders and session, as if you\'d never opened the app. Continue?');
+  if (!ok) return;
+  try {
+    const db = await openDB();
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).clear();
+    await new Promise(function (resolve) { tx.oncomplete = resolve; tx.onerror = resolve; });
+  } catch (e) { console.warn('reset idb failed', e); }
+  try { localStorage.clear(); } catch (e) { /* ignore */ }
+  location.reload();
+}
+
+async function initHandles() {
+  if (!hasDirAccess) return;
+  try {
+    const savedReaperDir = await idbGet('reaperDirHandle');
+    if (savedReaperDir) {
+      const status = await savedReaperDir.queryPermission({ mode: 'readwrite' }).catch(function () { return 'denied'; });
+      if (status === 'granted') {
+        state.reaperDirHandle = savedReaperDir;
+        state.reaperDirName = savedReaperDir.name;
+        await autoDiscoverReaperFiles();
+      } else {
+        state.pendingReaperDirHandle = savedReaperDir;
+        state.reaperDirName = savedReaperDir.name;
+      }
+    }
+  } catch (e) { console.warn('reaper dir restore failed', e); }
+}
+
+/* ===================== Drag & drop engine ===================== */
+let drag = null;
+
+function makeDraggable(el, getPayload) {
+  let suppressClick = false;
+  el.addEventListener('click', function (e) {
+    if (suppressClick) { e.stopPropagation(); e.preventDefault(); suppressClick = false; }
+  }, true);
+  el.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    let started = false;
+    function onMove(ev) {
+      if (!started) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return;
+        started = true;
+        suppressClick = true;
+        beginDrag(ev, getPayload());
+      }
+      updateDragMove(ev);
+    }
+    function onUp(ev) {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (started) endDrag(ev);
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+}
+
+function beginDrag(e, payload) {
+  drag = { payload: payload, dropTarget: null, ghost: null };
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  ghost.textContent = payload.label || '';
+  document.body.appendChild(ghost);
+  drag.ghost = ghost;
+  document.body.classList.add('dragging');
+  positionGhost(e);
+}
+function positionGhost(e) {
+  if (!drag || !drag.ghost) return;
+  drag.ghost.style.left = (e.clientX + 12) + 'px';
+  drag.ghost.style.top = (e.clientY + 10) + 'px';
+}
+function updateDragMove(e) {
+  if (!drag) return;
+  positionGhost(e);
+  computeDropTarget(e);
+  if (!drag.payload.isNew && drag.ghost) drag.ghost.classList.toggle('copy-mode', !!(e.ctrlKey || e.metaKey));
+}
+function cloneNode(node) {
+  if (node.type === 'action') return newAction(node.command, node.text, node.actionKind, node.icon);
+  if (node.type === 'separator') return newSeparator();
+  if (node.type === 'header') return newHeader(node.text);
+  if (node.type === 'submenu') {
+    const clone = newSubmenu(node.text);
+    clone._collapsed = node._collapsed;
+    clone.children = node.children.map(cloneNode);
+    return clone;
+  }
+  if (node.type === 'group') return newGroupRef(node.groupId);
+  return node;
+}
+function arrayIsWithin(arr, ancestorNode) {
+  if (!ancestorNode.children) return false;
+  if (arr === ancestorNode.children) return true;
+  return ancestorNode.children.some(function (c) { return c.type === 'submenu' && arrayIsWithin(arr, c); });
+}
+
+let hoverExpandTimer = null;
+let hoverExpandNodeId = null;
+const HOVER_EXPAND_DELAY = 550;
+function handleHoverExpand(node) {
+  if (!node._collapsed) { cancelHoverExpand(); return; }
+  if (hoverExpandNodeId === node.id) return;
+  cancelHoverExpand();
+  hoverExpandNodeId = node.id;
+  hoverExpandTimer = setTimeout(function () {
+    node._collapsed = false;
+    hoverExpandTimer = null;
+    hoverExpandNodeId = null;
+    renderCanvas();
+  }, HOVER_EXPAND_DELAY);
+}
+function cancelHoverExpand() {
+  if (hoverExpandTimer) { clearTimeout(hoverExpandTimer); hoverExpandTimer = null; }
+  hoverExpandNodeId = null;
+}
+
+function computeDropTarget(e) {
+  clearDropIndicators();
+  drag.dropTarget = null;
+  const canvasRoot = document.getElementById('canvas-root');
+  const rect0 = canvasRoot.getBoundingClientRect();
+  const inCanvas = e.clientX >= rect0.left && e.clientX <= rect0.right && e.clientY >= rect0.top && e.clientY <= rect0.bottom;
+  if (!inCanvas) { cancelHoverExpand(); return; }
+  const hasActiveTarget = state.editingGroupId
+    ? !!state.groups[state.editingGroupId]
+    : state.sections.some(function (s) { return s.name === state.currentSectionName; });
+  if (!hasActiveTarget) { cancelHoverExpand(); return; }
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const blockEl = el && el.closest ? el.closest('.block:not(.block-readonly)') : null;
+  const rootArr = getActiveRootArray();
+  const dragged = drag.payload.isNew ? null : drag.payload.node;
+
+  // 1) Directly over a submenu's own row (middle band): offer to drop INSIDE it, appended at the end.
+  //    If the submenu is collapsed, staying over it for a moment auto-expands it (like Explorer).
+  if (blockEl && canvasRoot.contains(blockEl)) {
+    const targetNode = findNodeById(rootArr, blockEl.dataset.id);
+    if (targetNode) {
+      if (targetNode.type === 'submenu') { handleHoverExpand(targetNode); } else { cancelHoverExpand(); }
+      if (dragged && (dragged === targetNode || (dragged.type === 'submenu' && nodeContains(dragged, targetNode)))) return;
+      const rowEl = blockEl.querySelector(':scope > .block-row') || blockEl;
+      const rowRect = rowEl.getBoundingClientRect();
+      const relY = (e.clientY - rowRect.top) / rowRect.height;
+      if (targetNode.type === 'submenu' && relY > 0.3 && relY < 0.7 && e.clientY >= rowRect.top && e.clientY <= rowRect.bottom) {
+        if (dragged && dragged.type === 'submenu' && arrayIsWithin(targetNode.children, dragged)) return;
+        drag.dropTarget = { array: targetNode.children, index: targetNode.children.length };
+        blockEl.classList.add('drop-hover-inside');
+        return;
+      }
+    } else {
+      cancelHoverExpand();
+    }
+  }
+
+  // 2) Otherwise: find which sibling list/container we're over, then pick the single gap
+  //    closest to the cursor by comparing against each sibling's vertical midpoint.
+  let siblingArray, containerEl;
+  if (blockEl && canvasRoot.contains(blockEl)) {
+    const targetNode = findNodeById(rootArr, blockEl.dataset.id);
+    if (!targetNode) return;
+    siblingArray = findParentArray(rootArr, targetNode) || rootArr;
+    containerEl = blockEl.parentElement;
+  } else {
+    cancelHoverExpand();
+    const childrenWrap = el && el.closest ? el.closest('.block-children:not(.readonly)') : null;
+    if (childrenWrap && canvasRoot.contains(childrenWrap)) {
+      const ownerBlockEl = childrenWrap.parentElement;
+      const ownerNode = ownerBlockEl ? findNodeById(rootArr, ownerBlockEl.dataset.id) : null;
+      if (ownerNode && ownerNode.type === 'submenu') {
+        siblingArray = ownerNode.children;
+        containerEl = childrenWrap;
+      } else {
+        siblingArray = rootArr; containerEl = canvasRoot;
+      }
+    } else {
+      siblingArray = rootArr; containerEl = canvasRoot;
+    }
+  }
+
+  if (dragged && dragged.type === 'submenu' && arrayIsWithin(siblingArray, dragged)) return;
+
+  const childEls = Array.prototype.slice.call(containerEl.children).filter(function (c) {
+    return c.classList.contains('block') && !c.classList.contains('block-readonly');
+  });
+  let insertIndex = siblingArray.length;
+  for (let i = 0; i < childEls.length; i++) {
+    const r = childEls[i].getBoundingClientRect();
+    const mid = r.top + r.height / 2;
+    if (e.clientY < mid) { insertIndex = i; break; }
+  }
+  drag.dropTarget = { array: siblingArray, index: insertIndex };
+  if (insertIndex < childEls.length) {
+    const r = childEls[insertIndex].getBoundingClientRect();
+    const prevR = insertIndex > 0 ? childEls[insertIndex - 1].getBoundingClientRect() : null;
+    const top = prevR ? (prevR.bottom + r.top) / 2 : r.top - 3;
+    showDropLine(r.left, top, r.width);
+  } else if (childEls.length) {
+    const r = childEls[childEls.length - 1].getBoundingClientRect();
+    showDropLine(r.left, r.bottom + 3, r.width);
+  } else {
+    containerEl.classList.add('drop-hover-root');
+  }
+}
+function showDropLine(left, top, width) {
+  const line = document.getElementById('drop-line');
+  line.style.left = left + 'px';
+  line.style.top = (top - 1.5) + 'px';
+  line.style.width = width + 'px';
+  line.style.display = 'block';
+}
+function hideDropLine() {
+  const line = document.getElementById('drop-line');
+  if (line) line.style.display = 'none';
+}
+function clearDropIndicators() {
+  hideDropLine();
+  document.querySelectorAll('.drop-hover-inside,.drop-hover-root').forEach(function (el) {
+    el.classList.remove('drop-hover-inside', 'drop-hover-root');
+  });
+}
+function endDrag(e) {
+  document.body.classList.remove('dragging');
+  if (drag && drag.ghost) drag.ghost.remove();
+  clearDropIndicators();
+  cancelHoverExpand();
+  if (drag) drag.copyMode = !!(e && (e.ctrlKey || e.metaKey));
+  if (drag && drag.dropTarget) commitDrop(drag);
+  drag = null;
+}
+function commitDrop(d) {
+  const targetArray = d.dropTarget.array;
+  let targetIndex = d.dropTarget.index;
+
+  const isPlainMove = !d.payload.isNew && !d.copyMode;
+  let incomingGroupId = null;
+  if (d.payload.isNew) {
+    incomingGroupId = d.payload.groupId || null;
+  } else if (d.payload.node.type === 'group') {
+    incomingGroupId = d.payload.node.groupId;
+  }
+  if (incomingGroupId) {
+    const duplicate = targetArray.some(function (n) {
+      if (n.type !== 'group' || n.groupId !== incomingGroupId) return false;
+      if (isPlainMove && n === d.payload.node) return false;
+      return true;
+    });
+    if (duplicate) {
+      showToast('Non puoi inserire lo stesso gruppo due volte allo stesso livello.', 'error');
+      return;
+    }
+  }
+
+  if (d.payload.isNew) {
+    targetArray.splice(targetIndex, 0, d.payload.spawn());
+  } else if (d.copyMode) {
+    targetArray.splice(targetIndex, 0, cloneNode(d.payload.node));
+  } else {
+    const node = d.payload.node;
+    const rootArr = getActiveRootArray();
+    const srcArray = findParentArray(rootArr, node);
+    if (!srcArray) return;
+    const srcIndex = srcArray.indexOf(node);
+    if (srcIndex === -1) return;
+    srcArray.splice(srcIndex, 1);
+    if (srcArray === targetArray && srcIndex < targetIndex) targetIndex--;
+    targetArray.splice(targetIndex, 0, node);
+  }
+  markDirty();
+  renderCanvas();
+  renderPalette();
+  scheduleAutosave();
+}
+
+/* ===================== Rendering: top bar / sections ===================== */
+function renderAll() {
+  renderTopbar();
+  renderSectionList();
+  renderCanvas();
+  renderPalette();
+  document.getElementById('canvas-panel').classList.toggle('disabled', state.sections.length === 0);
+}
+function renderTopbar() {
+  const reaperTag = document.getElementById('reaper-dir-tag');
+  if (state.pendingReaperDirHandle) {
+    reaperTag.textContent = '🔓 ' + state.reaperDirName + ' — click to reconfirm';
+    reaperTag.classList.add('needs-reconfirm');
+    reaperTag.onclick = setReaperDirectory;
+  } else if (state.reaperDirName) {
+    const dataStatus = state.dataDirStatus === 'found' ? ' · Data ✓' : (state.dataDirStatus === 'missing' ? ' · Data ⚠️ not found' : '');
+    reaperTag.textContent = '📂 ' + state.reaperDirName + dataStatus;
+    reaperTag.classList.remove('needs-reconfirm');
+    reaperTag.onclick = null;
+  } else {
+    reaperTag.textContent = 'Not set';
+    reaperTag.classList.remove('needs-reconfirm');
+    reaperTag.onclick = null;
+  }
+  reaperTag.title = state.reaperDirName || '';
+  const blocked = !state.reaperDirHandle;
+  document.getElementById('dir-required-overlay').classList.toggle('active', blocked);
+  document.getElementById('reaper-dir-control').classList.toggle('blink', blocked);
+  updateDirtyIndicator();
+}
+function hasExportableContent() {
+  return state.sections.some(function (s) { return s.items.length > 0; });
+}
+function renderSectionList() {
+  const root = document.getElementById('section-list');
+  const filter = (document.getElementById('section-search').value || '').toLowerCase();
+
+  if (state.sections.length > 0) {
+    try { localStorage.setItem(LS_CREATED_SECTION_KEY, '1'); } catch (e) { /* ignore */ }
+  }
+  let createdSectionOnce = false;
+  try { createdSectionOnce = localStorage.getItem(LS_CREATED_SECTION_KEY) === '1'; } catch (e) { /* ignore */ }
+  document.getElementById('btn-new-section').classList.toggle('blink', state.sections.length === 0 && !createdSectionOnce);
+
+  root.innerHTML = '';
+  state.sections
+    .slice()
+    .sort(function (a, b) {
+      const ia = VALID_SECTION_NAMES.findIndex(function (opt) { return opt.value === a.name; });
+      const ib = VALID_SECTION_NAMES.findIndex(function (opt) { return opt.value === b.name; });
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    })
+    .filter(function (s) { return (s.displayTitle || s.name).toLowerCase().indexOf(filter) !== -1; })
+    .forEach(function (s) {
+      const div = document.createElement('div');
+      div.className = 'section-item' + (s.name === state.currentSectionName && !state.editingGroupId ? ' active' : '');
+      div.title = s.name;
+      div.onclick = function () { state.currentSectionName = s.name; state.editingGroupId = null; renderAll(); };
+
+      const label = document.createElement('span');
+      label.className = 'section-item-label';
+      label.textContent = s.displayTitle || s.name;
+      div.appendChild(label);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'section-item-delete';
+      delBtn.textContent = '🗑';
+      delBtn.title = 'Delete context';
+      delBtn.onclick = async function (ev) {
+        ev.stopPropagation();
+        const ok = await showConfirmModal('Delete context "' + (s.displayTitle || s.name) + '" and all its content?');
+        if (!ok) return;
+        const idx = state.sections.indexOf(s);
+        if (idx > -1) state.sections.splice(idx, 1);
+        if (state.currentSectionName === s.name) {
+          state.currentSectionName = state.sections.length ? state.sections[0].name : null;
+        }
+        markDirty();
+        renderAll();
+        scheduleAutosave();
+      };
+      div.appendChild(delBtn);
+
+      root.appendChild(div);
+    });
+}
+
+/* ===================== Default menu templates ("Genera Menu di Default") =====================
+   Ogni funzione qui sotto costruisce un "nodo" del template: una descrizione di una voce di menu.
+   Il nodo diventa una voce vera solo quando l'utente clicca "Aggiungi Voci di Default di Reaper":
+   in quel momento l'app usa lo stato attuale di state.nativeActions (caricato da
+   Data/REAPER_DefaultAction.lst) per trovare il numero comando giusto per la SUA versione di REAPER installata. */
+
+// Azione: cercata per NOME dentro Data/REAPER_DefaultAction.lst ogni volta che si genera il menu.
+// n = testo mostrato nel menu. override (opzionale) = nome esatto dell'azione da cercare nel file,
+// se diverso dal testo del menu (es. il menu dice "Chiudi progetto" ma l'azione
+// si chiama "Close current project tab"). Questo è il caso NORMALE, usato per quasi tutte le voci:
+// si autoaggiorna da solo anche se in futuro REAPER cambia il numero di un comando.
+function tA(n, override) { return { t: 'a', n: n, s: override || null }; }
+
+// Separatore: la lineetta divisoria tra due gruppi di voci nel menu.
+function tS() { return { t: 's' }; }
+
+// Header: una riga di solo testo, non cliccabile. Usato sia per titoli veri, sia per le voci che
+// REAPER riempie da solo a runtime (es. "(track template list)", "(take list)") — quelle non
+// sono comandi, sono segnaposto per liste dinamiche, quindi non vanno mai cercate come azioni.
+function tH(n) { return { t: 'h', n: n }; }
+
+// Menu (sottomenu): una voce che apre un sotto-elenco. n = nome del sottomenu, c = le voci al suo interno.
+function tM(n, c) { return { t: 'm', n: n, c: c }; }
+
+// Fisso: usato SOLO per i comandi che REAPER non elenca in Data/REAPER_DefaultAction.lst — comandi reali ma
+// "invisibili" alla ricerca per nome (REAPER non li considera azioni assegnabili a un tasto). n = testo
+// mostrato nel menu, id = il numero che REAPER stesso ha scritto nel file .ReaperMenu esportato
+// dall'utente. A differenza di tA(), qui il numero NON si autoaggiorna: resta fisso, quello preso
+// una volta dal file esportato. Va usato con parsimonia, solo quando tA() non può funzionare.
+function tF(n, id) { return { t: 'f', n: n, id: id }; }
+
+</script>
+<script src="Data/default-menu-templates.js"></script>
+<script src="Data/help-content.js"></script>
+<script>
+
+// Comandi riservati: gli stessi usati sopra tramite tF(), esposti anche nella palette (scheda
+// "native", badge "Riservato") così l'utente può aggiungerli a mano in un menu costruito da zero,
+// non solo tramite "Aggiungi Voci di Default di Reaper". Sono gli unici comandi REAPER che non
+// compaiono mai in Data/REAPER_DefaultAction.lst, quindi vivono qui come lista fissa.
+const RESERVED_MENU_COMMANDS = [
+  { id: '2', name: 'Hide Transport' },
+  { id: '1945', name: '(lane name)' },
+  { id: '2998', name: 'Show recent actions' },
+  { id: '40054', name: 'Delete point' },
+  { id: '40055', name: 'Insert point' },
+  { id: '40079', name: 'Close' },
+  { id: '40154', name: 'Set point value...' },
+  { id: '40191', name: 'Linear' },
+  { id: '40192', name: 'Square' },
+  { id: '40237', name: 'Show FX parameters in panel' },
+  { id: '40264', name: 'no markers/regions' },
+  { id: '40423', name: 'Slow start/end' },
+  { id: '40426', name: 'Fast start' },
+  { id: '40427', name: 'Fast end' },
+  { id: '40443', name: 'Cut FX' },
+  { id: '40550', name: 'Bypass FX' },
+  { id: '40551', name: 'Offline FX' },
+  { id: '40552', name: 'Delete FX' },
+  { id: '40553', name: 'Show FX chain' },
+  { id: '40554', name: 'Float FX configuration' },
+  { id: '40555', name: 'Bypass chain' },
+  { id: '40556', name: 'Add FX...' },
+  { id: '40558', name: 'Show track routing window' },
+  { id: '40559', name: 'Mute send' },
+  { id: '40560', name: 'Remove send' },
+  { id: '40561', name: 'Show send parameters' },
+  { id: '40562', name: 'Rename FX instance' },
+  { id: '40564', name: 'Go to send destination track' },
+  { id: '40673', name: 'Playrate fader range: 0.25-4.0 (default)' },
+  { id: '40674', name: 'Playrate fader range: 0.5-2.0' },
+  { id: '40675', name: 'Playrate fader range: 0.75-1.5' },
+  { id: '40676', name: 'Playrate fader range: 0.9-1.1' },
+  { id: '40682', name: 'Bezier' },
+  { id: '40700', name: 'Pitch envelope: range/snap...' },
+  { id: '40854', name: 'Select envelope (env name)' },
+  { id: '41068', name: 'Quick add FX' },
+  { id: '41073', name: 'Add FX chain' },
+  { id: '41222', name: 'Paste FX' },
+  { id: '41224', name: 'Copy FX' },
+  { id: '41225', name: 'Copy FX (include automation)' },
+  { id: '41833', name: 'Paste Replace FX' },
+  { id: '41915', name: 'Replace FX...' },
+  { id: '41917', name: 'Quick replace FX' },
+  { id: '41933', name: 'Volume envelope: amplitude scaling' },
+  { id: '41934', name: 'Volume envelope: fader scaling' },
+  { id: '42094', name: '<automation items on disk>' },
+  { id: '42216', name: 'Move FX to container' },
+  { id: '42217', name: 'Add container' },
+  { id: '42219', name: 'Automation items' },
+  { id: '42507', name: 'Insert empty lane above this lane' },
+  { id: '42508', name: 'Delete lane (including media items)' },
+  { id: '42614', name: 'Cut FX (include automation)' },
+  { id: '42625', name: 'New recording adds lanes in layers (multiple lanes play at once)' },
+  { id: '42628', name: 'Set items in all lanes to one random color per lane' },
+  { id: '42656', name: 'Run FX in parallel with previous FX' },
+  { id: '42658', name: 'Run FX in parallel with previous FX (merge MIDI)' },
+  { id: '42804', name: '(lane list)' },
+  { id: '42932', name: 'Delete all other lanes' },
+  { id: '42934', name: 'Sum' },
+  { id: '42935', name: 'Sum with midpoint bias' },
+  { id: '42936', name: 'Average' },
+  { id: '42937', name: 'Multiply' },
+  { id: '43186', name: 'New recording adds lanes (new lanes play exclusively)' },
+  { id: '43187', name: 'New recording does not add lanes (record into playing lane)' },
+  { id: '43694', name: 'Build multi-mono FX' },
+  { id: '43695', name: 'Build multi-stereo FX' },
+  { id: '43699', name: 'Display parent project time as secondary' },
+  { id: '43700', name: 'Display parent project time as secondary' },
+  { id: '43806', name: 'Mute send slot for all tracks' },
+  { id: '43807', name: 'Mute send slot for selected tracks' },
+  { id: '43808', name: 'Bypass FX slot for all tracks' },
+  { id: '43809', name: 'Bypass FX slot for selected tracks' },
+  { id: '44000', name: '(recent project list)' },
+  { id: '45000', name: '(take list)' },
+  { id: '45100', name: '(comp list)' },
+  { id: '45500', name: '(theme list)' },
+  { id: '46001', name: '(track template list)' },
+  { id: '48000', name: '(project template list)' },
+  { id: '48400', name: 'Default' },
+  { id: '49000', name: '(folder list)' }
+];
+
+function bareActionName(n) {
+  const idx = n.indexOf(': ');
+  let bare = idx !== -1 ? n.slice(idx + 2) : n;
+  bare = bare.trim().replace(/\.\.\.$/, '').trim();
+  return bare.toLowerCase();
+}
+
+function findMainActionByName(targetName) {
+  const target = bareActionName(targetName);
+  let match = state.nativeActions.find(function (a) { return a.section === 'Main' && bareActionName(a.name) === target; });
+  if (match) return match;
+  match = state.nativeActions.find(function (a) { return a.section === 'Main' && bareActionName(a.name).indexOf(target) !== -1; });
+  return match || null;
+}
+
+function resolveTemplateNode(item) {
+  if (item.t === 's') return newSeparator();
+  if (item.t === 'h') return newHeader(item.n);
+  if (item.t === 'f') return newAction(item.id, item.n, 'native'); // numero fisso, non cercato per nome
+  if (item.t === 'm') {
+    const sub = newSubmenu(item.n);
+    sub.children = item.c.map(resolveTemplateNode);
+    return sub;
+  }
+  const match = findMainActionByName(item.s || item.n);
+  if (match) return newAction(match.id, item.n, 'native');
+  return newHeader('⚠️ CHECK: ' + item.n);
+}
+
+function generateDefaultSection(sectionName) {
+  const template = DEFAULT_MENU_TEMPLATES[sectionName];
+  if (!template) return null;
+  if (!state.nativeActions.length) {
+    showToast('REAPER actions weren\'t loaded correctly.', 'error');
+    return null;
+  }
+  return template.map(resolveTemplateNode);
+}
+
+const VALID_SECTION_NAMES = [
+  { value: 'Main file', label: 'Main file' },
+  { value: 'Main edit', label: 'Main edit' },
+  { value: 'Main view', label: 'Main view' },
+  { value: 'Main insert', label: 'Main insert' },
+  { value: 'Main item', label: 'Main item' },
+  { value: 'Main track', label: 'Main track' },
+  { value: 'Main options', label: 'Main options' },
+  { value: 'Main actions', label: 'Main actions' },
+  { value: 'Ruler/arrange context', label: 'Ruler/arrange context' },
+  { value: 'Track control panel context', label: 'Track control panel context' },
+  { value: 'Track fixed lane controls context', label: 'Track fixed lane controls context' },
+  { value: 'Track spacer context', label: 'Track spacer context' },
+  { value: 'Empty TCP context', label: 'Empty TCP context' },
+  { value: 'Media item context', label: 'Media item context' },
+  { value: 'Envelope context', label: 'Envelope context' },
+  { value: 'Envelope point context', label: 'Envelope point context' },
+  { value: 'Automation item context', label: 'Automation item context' },
+  { value: 'Mixer context', label: 'Mixer context' },
+  { value: 'FX extended mixer context', label: 'FX extended mixer context' },
+  { value: 'Sends extended mixer context', label: 'Sends extended mixer context' },
+  { value: 'Transport context', label: 'Transport context' }
+];
+
+function openNewSectionModal() {
+  const select = document.getElementById('new-section-select');
+  select.innerHTML = '';
+  VALID_SECTION_NAMES.forEach(function (opt) {
+    const used = state.sections.some(function (s) { return s.name === opt.value; });
+    const o = document.createElement('option');
+    o.value = opt.value;
+    o.textContent = opt.label + (used ? ' (already used)' : '');
+    o.disabled = used;
+    select.appendChild(o);
+  });
+  const firstFree = VALID_SECTION_NAMES.find(function (opt) { return !state.sections.some(function (s) { return s.name === opt.value; }); });
+  if (firstFree) select.value = firstFree.value;
+  select.disabled = !firstFree;
+  select.onchange = updateNewSectionTemplateHint;
+  updateNewSectionTemplateHint();
+  document.getElementById('new-section-confirm').disabled = !firstFree;
+  document.getElementById('new-section-confirm-all').disabled = !firstFree;
+  document.getElementById('new-section-overlay').classList.add('open');
+}
+function updateNewSectionTemplateHint() {
+  const hint = document.getElementById('new-section-template-hint');
+  hint.textContent = 'Once created, you can add REAPER\'s default items using the button next to the menu name.';
+}
+function closeNewSectionModal() {
+  document.getElementById('new-section-overlay').classList.remove('open');
+}
+
+/* ===================== Modale generica (sostituisce confirm()/prompt() del browser) ===================== */
+function showConfirmModal(message, opts) {
+  opts = opts || {};
+  return new Promise(function (resolve) {
+    const overlay = document.getElementById('generic-modal-overlay');
+    document.getElementById('generic-modal-title').textContent = opts.title || 'Confirm';
+    document.getElementById('generic-modal-message').textContent = message;
+    const input = document.getElementById('generic-modal-input');
+    input.style.display = 'none';
+    const cancelBtn = document.getElementById('generic-modal-cancel');
+    const confirmBtn = document.getElementById('generic-modal-confirm');
+    cancelBtn.style.display = '';
+    cancelBtn.textContent = opts.cancelLabel || 'Cancel';
+    confirmBtn.textContent = opts.confirmLabel || 'Confirm';
+    function cleanup(result) {
+      overlay.classList.remove('open');
+      cancelBtn.onclick = null; confirmBtn.onclick = null;
+      resolve(result);
+    }
+    cancelBtn.onclick = function () { cleanup(false); };
+    confirmBtn.onclick = function () { cleanup(true); };
+    overlay.classList.add('open');
+  });
+}
+function showPromptModal(message, defaultValue) {
+  return new Promise(function (resolve) {
+    const overlay = document.getElementById('generic-modal-overlay');
+    document.getElementById('generic-modal-title').textContent = message;
+    document.getElementById('generic-modal-message').textContent = '';
+    const input = document.getElementById('generic-modal-input');
+    input.style.display = '';
+    input.value = defaultValue || '';
+    const cancelBtn = document.getElementById('generic-modal-cancel');
+    const confirmBtn = document.getElementById('generic-modal-confirm');
+    cancelBtn.style.display = '';
+    cancelBtn.textContent = 'Cancel';
+    confirmBtn.textContent = 'OK';
+    function cleanup(result) {
+      overlay.classList.remove('open');
+      cancelBtn.onclick = null; confirmBtn.onclick = null; input.onkeydown = null;
+      resolve(result);
+    }
+    cancelBtn.onclick = function () { cleanup(null); };
+    confirmBtn.onclick = function () { const v = input.value.trim(); cleanup(v || null); };
+    input.onkeydown = function (e) {
+      if (e.key === 'Enter') confirmBtn.onclick();
+      if (e.key === 'Escape') cancelBtn.onclick();
+    };
+    overlay.classList.add('open');
+    setTimeout(function () { input.focus(); input.select(); }, 30);
+  });
+}
+function newSectionTargetName() {
+  const trimmed = document.getElementById('new-section-select').value;
+  closeNewSectionModal();
+  if (!trimmed) return null;
+  const existing = state.sections.find(function (s) { return s.name === trimmed; });
+  if (existing) {
+    state.currentSectionName = trimmed;
+    state.editingGroupId = null;
+    renderAll();
+    showToast('A context with this name already exists, I\'ve selected it.', 'error');
+    return null;
+  }
+  return trimmed;
+}
+function confirmNewSection() {
+  const trimmed = newSectionTargetName();
+  if (!trimmed) return;
+  state.sections.push({ name: trimmed, displayTitle: null, defaultHash: null, extraLines: [], items: [] });
+  state.currentSectionName = trimmed;
+  state.editingGroupId = null;
+  markDirty();
+  renderAll();
+  scheduleAutosave();
+}
+function confirmAllNewSections() {
+  closeNewSectionModal();
+  const missing = VALID_SECTION_NAMES.filter(function (opt) { return !state.sections.some(function (s) { return s.name === opt.value; }); });
+  if (!missing.length) { showToast('All 21 contexts already exist.', 'error'); return; }
+  missing.forEach(function (opt) {
+    state.sections.push({ name: opt.value, displayTitle: null, defaultHash: null, extraLines: [], items: [] });
+  });
+  state.currentSectionName = missing[0].value;
+  state.editingGroupId = null;
+  markDirty();
+  renderAll();
+  scheduleAutosave();
+  showToast('Created ' + missing.length + ' empty contexts.', 'success');
+}
+async function addDefaultsToCurrentSection() {
+  const s = state.sections.find(function (s) { return s.name === state.currentSectionName; });
+  if (!s) return;
+  const items = generateDefaultSection(s.name);
+  if (!items) return;
+  if (s.items.length) {
+    const ok = await showConfirmModal(items.length + ' default items will be added to the "' + (s.displayTitle || s.name) + '" menu');
+    if (!ok) return;
+    s.items = items.concat([newSeparator()], s.items);
+  } else {
+    s.items = items;
+  }
+  markDirty();
+  renderAll();
+  scheduleAutosave();
+  const unresolved = items.filter(function (n) { return n.type === 'header' && n.text.indexOf('⚠️ CHECK:') === 0; }).length;
+  showToast('Default items added to the top (' + items.length + (unresolved ? ', ' + unresolved + ' to review' : '') + ').', unresolved ? 'error' : 'success');
+}
+
+/* ===================== Rendering: canvas ===================== */
+const TYPE_META = {
+  action_native: { badge: 'REAPER', cls: 'badge-native' },
+  action_custom: { badge: 'Custom', cls: 'badge-custom' },
+  separator: { badge: 'Separator', cls: 'badge-separator' },
+  header: { badge: 'Title', cls: 'badge-header' },
+  needs_review: { badge: '⚠️ To review', cls: 'badge-review' },
+  submenu: { badge: 'Submenu', cls: 'badge-submenu' },
+  group: { badge: 'Group', cls: 'badge-group' }
+};
+
+function renderCanvas() {
+  renderBreadcrumb();
+  const root = document.getElementById('canvas-root');
+  root.innerHTML = '';
+  const items = getActiveRootArray();
+  if (items.length) {
+    try { localStorage.setItem(LS_ADDED_ITEM_KEY, '1'); } catch (e) { /* ignore */ }
+  } else {
+    let addedItemOnce = false;
+    try { addedItemOnce = localStorage.getItem(LS_ADDED_ITEM_KEY) === '1'; } catch (e) { /* ignore */ }
+    const empty = document.createElement('div');
+    empty.className = 'canvas-empty' + (addedItemOnce ? '' : ' blink');
+    empty.textContent = 'Empty. Drag an item here from the palette on the right.';
+    root.appendChild(empty);
+  }
+  items.forEach(function (node) { root.appendChild(renderNode(node)); });
+}
+
+function renderBreadcrumb() {
+  const bc = document.getElementById('canvas-breadcrumb');
+  bc.innerHTML = '';
+  if (state.editingGroupId) {
+    const g = state.groups[state.editingGroupId];
+    const usedIn = computeGroupUsage(state.editingGroupId);
+    const back = document.createElement('button');
+    back.className = 'btn-back';
+    back.textContent = '← Back to menu';
+    back.onclick = function () { state.editingGroupId = null; renderAll(); };
+    bc.appendChild(back);
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn-secondary';
+    saveBtn.textContent = '💾 Save Group';
+    saveBtn.onclick = saveGroupsFile;
+    bc.appendChild(saveBtn);
+    const label = document.createElement('span');
+    label.className = 'breadcrumb-label';
+    label.textContent = 'Group: ' + (g ? g.name : '?') + (usedIn.length ? (' — used in: ' + usedIn.join(', ')) : ' — not used in any menu yet');
+    bc.appendChild(label);
+  } else {
+    const s = state.sections.find(function (s) { return s.name === state.currentSectionName; });
+    if (s) {
+      const previewBtn = document.createElement('button');
+      previewBtn.className = 'btn-secondary';
+      previewBtn.textContent = '🎯 Preview';
+      previewBtn.disabled = !s.items.length;
+      previewBtn.title = s.items.length ? 'Preview of this menu, as it would appear in REAPER' : 'The menu is empty, there\'s nothing to preview';
+      previewBtn.onclick = function (e) {
+        showFlyoutMenu(s.items, e.clientX, e.clientY);
+      };
+      bc.appendChild(previewBtn);
+    }
+    const label = document.createElement('span');
+    label.className = 'breadcrumb-label';
+    label.textContent = s ? ('Menu: ' + (s.displayTitle || s.name)) : 'No menu selected — open a file or choose a context';
+    bc.appendChild(label);
+    if (s && DEFAULT_MENU_TEMPLATES[s.name]) {
+      const defBtn = document.createElement('button');
+      defBtn.className = 'btn-secondary';
+      defBtn.style.marginLeft = 'auto';
+      defBtn.textContent = '✅ Add Reaper Default Items';
+      defBtn.title = s.items.length ? 'Adds REAPER\'s default items to the top of the menu, followed by a separator — what\'s already there stays below' : 'Fills the empty menu with REAPER\'s default items';
+      defBtn.onclick = addDefaultsToCurrentSection;
+      bc.appendChild(defBtn);
+    }
+  }
+}
+
+function renderNode(node) {
+  const el = document.createElement('div');
+  el.className = 'block block-' + node.type;
+  el.dataset.id = node.id;
+
+  const row = document.createElement('div');
+  row.className = 'block-row';
+
+  const handle = document.createElement('span');
+  handle.className = 'drag-handle';
+  handle.textContent = '⠿';
+  row.appendChild(handle);
+
+  let meta, labelText;
+  if (node.type === 'action') {
+    meta = node.actionKind === 'custom' ? TYPE_META.action_custom : TYPE_META.action_native;
+    labelText = node.text || '(unnamed)';
+  } else if (node.type === 'group') {
+    meta = TYPE_META.group;
+    const g = state.groups[node.groupId];
+    labelText = g ? g.name : '(missing group)';
+  } else {
+    meta = TYPE_META[node.type];
+    labelText = node.type === 'separator' ? 'Separator' : (node.text || '');
+  }
+  if (node.type === 'header' && labelText.indexOf('⚠️ CHECK:') === 0) {
+    meta = TYPE_META.needs_review;
+    labelText = labelText.slice('⚠️ CHECK:'.length).trim();
+  }
+
+  if (node.type === 'submenu') {
+    const chev = document.createElement('span');
+    chev.className = 'chevron';
+    chev.textContent = node._collapsed ? '📁' : '📂';
+    chev.title = node._collapsed ? 'Expand' : 'Collapse';
+    chev.onclick = function (ev) { ev.stopPropagation(); node._collapsed = !node._collapsed; renderCanvas(); };
+    row.appendChild(chev);
+  }
+  if (node.type === 'group') {
+    const pkg = document.createElement('span');
+    pkg.className = 'chevron icon-static';
+    pkg.textContent = '📦';
+    row.appendChild(pkg);
+  }
+
+  const badge = document.createElement('span');
+  badge.className = 'badge ' + meta.cls;
+  badge.textContent = meta.badge;
+  row.appendChild(badge);
+
+  const label = document.createElement('span');
+  label.className = 'block-label';
+  label.textContent = labelText;
+  if (node.type === 'action' || node.type === 'header' || node.type === 'submenu') {
+    label.ondblclick = function () { editLabelInline(label, node); };
+  }
+  row.appendChild(label);
+
+  if (node.type === 'action') {
+    const idTag = document.createElement('span');
+    idTag.className = 'cmd-id';
+    idTag.textContent = node.command;
+    row.appendChild(idTag);
+  }
+
+  if (node.type === 'group') {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'icon-btn'; editBtn.textContent = '✏️'; editBtn.title = 'Edit group';
+    editBtn.onclick = function (ev) { ev.stopPropagation(); state.editingGroupId = node.groupId; renderAll(); };
+    row.appendChild(editBtn);
+  }
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'icon-btn icon-btn-trash'; delBtn.textContent = '🗑'; delBtn.title = 'Delete';
+  delBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    const arr = findParentArray(getActiveRootArray(), node) || getActiveRootArray();
+    const i = arr.indexOf(node);
+    if (i > -1) arr.splice(i, 1);
+    markDirty(); renderCanvas(); renderPalette(); scheduleAutosave();
+  };
+  row.appendChild(delBtn);
+
+  el.appendChild(row);
+  makeDraggable(handle, function () { return { isNew: false, node: node, label: labelText }; });
+
+  if (node.type === 'submenu') {
+    const childWrap = document.createElement('div');
+    childWrap.className = 'block-children' + (node._collapsed ? ' collapsed' : '');
+    node.children.forEach(function (c) { childWrap.appendChild(renderNode(c)); });
+    if (!node.children.length) {
+      const ph = document.createElement('div');
+      ph.className = 'children-placeholder';
+      ph.textContent = 'Empty submenu — drag items here';
+      childWrap.appendChild(ph);
+    }
+    el.appendChild(childWrap);
+  } else if (node.type === 'group') {
+    const g = state.groups[node.groupId];
+    if (g && g.items.length) {
+      row.classList.add('has-preview');
+      const wrapOuter = document.createElement('div');
+      wrapOuter.className = 'group-preview-wrap';
+      g.items.forEach(function (c) { wrapOuter.appendChild(renderReadonlyNode(c)); });
+      el.appendChild(wrapOuter);
+    }
+  }
+  return el;
+}
+
+function renderReadonlyNode(node) {
+  const el = document.createElement('div');
+  el.className = 'block block-readonly block-' + node.type;
+  const row = document.createElement('div'); row.className = 'block-row';
+  let meta, labelText;
+  if (node.type === 'action') { meta = node.actionKind === 'custom' ? TYPE_META.action_custom : TYPE_META.action_native; labelText = node.text; }
+  else if (node.type === 'group') { meta = TYPE_META.group; const g = state.groups[node.groupId]; labelText = g ? g.name : '(missing group)'; }
+  else { meta = TYPE_META[node.type]; labelText = node.type === 'separator' ? 'Separator' : (node.text || ''); }
+  const badge = document.createElement('span'); badge.className = 'badge ' + meta.cls; badge.textContent = meta.badge; row.appendChild(badge);
+  const label = document.createElement('span'); label.className = 'block-label'; label.textContent = labelText; row.appendChild(label);
+  el.appendChild(row);
+  if (node.type === 'submenu') {
+    const cw = document.createElement('div'); cw.className = 'block-children readonly';
+    node.children.forEach(function (c) { cw.appendChild(renderReadonlyNode(c)); });
+    el.appendChild(cw);
+  }
+  return el;
+}
+
+function editLabelInline(labelEl, node) {
+  const input = document.createElement('input');
+  input.className = 'inline-edit';
+  input.value = node.text || '';
+  labelEl.replaceWith(input);
+  input.focus(); input.select();
+  function commit() { node.text = input.value; markDirty(); renderCanvas(); scheduleAutosave(); }
+  input.onblur = commit;
+  input.onkeydown = function (e) {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') renderCanvas();
+  };
+}
+
+/* ===================== Rendering: palette ===================== */
+function renderPalette() {
+  document.querySelectorAll('.palette-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.tab === paletteTab); });
+  document.getElementById('palette-search-wrap').style.display = (paletteTab === 'native' || paletteTab === 'custom') ? '' : 'none';
+  const body = document.getElementById('palette-body');
+  body.innerHTML = '';
+
+  if (paletteTab === 'elements') {
+    body.appendChild(elementCard('Separator', 'badge-separator', function () { return newSeparator(); }));
+    body.appendChild(elementCard('Title', 'badge-header', function () { return newHeader('New title'); }));
+    body.appendChild(elementCard('Empty submenu', 'badge-submenu', function () { return newSubmenu('New submenu'); }));
+    const sep = document.createElement('div');
+    sep.className = 'palette-sep';
+    body.appendChild(sep);
+    body.appendChild(elementCard('Title: [ Context Name ]', 'badge-header', function () {
+      const s = state.sections.find(function (sec) { return sec.name === state.currentSectionName; });
+      return newHeader(s ? (s.displayTitle || s.name) : 'New title');
+    }, !!state.editingGroupId));
+    return;
+  }
+
+  if (paletteTab === 'groups') {
+    if (state.editingGroupId) {
+      const note = document.createElement('div');
+      note.className = 'palette-note';
+      note.textContent = 'You can\'t put a group inside another group.';
+      body.appendChild(note);
+      return;
+    }
+    const newBtn = document.createElement('button');
+    newBtn.className = 'btn-primary'; newBtn.textContent = '+ New group'; newBtn.style.marginBottom = '10px'; newBtn.style.width = '100%';
+    newBtn.onclick = async function () {
+      const name = await showPromptModal('New group name:');
+      if (!name) return;
+      const g = { id: uid('grp'), name: name, items: [] };
+      state.groups[g.id] = g;
+      state.editingGroupId = g.id;
+      renderAll(); scheduleAutosave();
+    };
+    body.appendChild(newBtn);
+
+    Object.values(state.groups).forEach(function (g) {
+      const usedIn = computeGroupUsage(g.id);
+      const card = document.createElement('div');
+      card.className = 'palette-card group-card';
+
+      const row = document.createElement('div');
+      row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.width = '100%'; row.style.gap = '4px';
+      const title = document.createElement('span'); title.className = 'card-title'; title.textContent = g.name;
+      row.appendChild(title);
+      const renameBtn = document.createElement('button'); renameBtn.className = 'icon-btn'; renameBtn.textContent = '✏️'; renameBtn.title = 'Rename';
+      renameBtn.onclick = async function (ev) {
+        ev.stopPropagation();
+        const nn = await showPromptModal('Rename group:', g.name);
+        if (nn) { g.name = nn; markDirty(); renderAll(); scheduleAutosave(); }
+      };
+      row.appendChild(renameBtn);
+      const delBtn = document.createElement('button'); delBtn.className = 'icon-btn icon-btn-trash'; delBtn.textContent = '🗑'; delBtn.title = 'Delete group';
+      delBtn.onclick = async function (ev) {
+        ev.stopPropagation();
+        const msg = usedIn.length ? ('Used in ' + usedIn.length + ' menu(s) (' + usedIn.join(', ') + '). Deleting it removes it from all of them. Continue?') : 'Delete this group?';
+        const ok = await showConfirmModal(msg);
+        if (!ok) return;
+        state.sections.forEach(function (sec) { removeGroupRefs(sec.items, g.id); });
+        delete state.groups[g.id];
+        if (state.editingGroupId === g.id) state.editingGroupId = null;
+        markDirty(); renderAll(); scheduleAutosave();
+      };
+      row.appendChild(delBtn);
+      card.appendChild(row);
+
+      const sub = document.createElement('div'); sub.className = 'card-sub';
+      sub.textContent = g.items.length + ' items · used in ' + usedIn.length + ' menu(s)';
+      card.appendChild(sub);
+
+      card.onclick = function () { state.editingGroupId = g.id; renderAll(); };
+      makeDraggable(card, function () { return { isNew: true, label: g.name, groupId: g.id, spawn: function () { return newGroupRef(g.id); } }; });
+      body.appendChild(card);
+    });
+    return;
+  }
+
+  const search = document.getElementById('palette-search');
+  const q = (search.value || '').toLowerCase();
+  const source = paletteTab === 'native' ? state.nativeActions : state.customActions;
+  const kind = paletteTab === 'native' ? 'native' : 'custom';
+
+  const importBtn = document.createElement('button');
+  importBtn.className = 'btn-secondary'; importBtn.style.width = '100%'; importBtn.style.marginBottom = '10px';
+  importBtn.textContent = paletteTab === 'native' ? '🔄 Refresh from REAPER_DefaultAction.lst' : '🔄 Refresh from reaper-kb.ini';
+  importBtn.onclick = function () { return paletteTab === 'native' ? refreshNativeActions(false) : refreshCustomActions(false); };
+  body.appendChild(importBtn);
+
+  const manualWrap = document.createElement('div');
+  manualWrap.className = 'manual-add';
+  const idInput = document.createElement('input'); idInput.className = 'manual-id'; idInput.placeholder = 'Command ID';
+  const nameInput = document.createElement('input'); nameInput.className = 'manual-name'; nameInput.placeholder = 'Action name';
+  const addBtn = document.createElement('button'); addBtn.className = 'btn-secondary'; addBtn.textContent = '+ Add manually';
+  manualWrap.appendChild(idInput); manualWrap.appendChild(nameInput); manualWrap.appendChild(addBtn);
+  body.appendChild(manualWrap);
+  addBtn.onclick = function () {
+    const id = idInput.value.trim();
+    const name = nameInput.value.trim();
+    if (!id || !name) return;
+    source.unshift({ id: id, name: name, manual: true });
+    idInput.value = ''; nameInput.value = '';
+    renderPalette();
+  };
+
+  const filtered = source.filter(function (a) { return a.name.toLowerCase().indexOf(q) !== -1 || a.id.toLowerCase().indexOf(q) !== -1; }).slice(0, 200);
+
+  if (!source.length) {
+    const empty = document.createElement('div');
+    empty.className = 'palette-note';
+    if (paletteTab === 'native') {
+      empty.innerHTML = 'No REAPER action list found.<br><br>Make sure you\'ve chosen the correct REAPER folder with "📁 REAPER Folder..." — it must contain the <code>Scripts\\Jay-JayDev\\ReaMenu Helper\\Data</code> subfolder installed by ReaPack.<br><br>Alternatively, add items manually above.';
+    } else {
+      empty.textContent = 'No custom actions found. Set the REAPER folder (it must contain reaper-kb.ini), or add items manually above.';
+    }
+    body.appendChild(empty);
+  }
+
+  filtered.forEach(function (a) {
+    const card = document.createElement('div');
+    card.className = 'palette-card';
+    card.innerHTML = '<span class="badge ' + (kind === 'native' ? 'badge-native' : 'badge-custom') + '">' + (kind === 'native' ? 'REAPER' : 'Custom') + '</span>' +
+      '<span class="card-title">' + escapeHtml(a.name) + '</span>' +
+      '<span class="cmd-id">' + escapeHtml(a.id) + '</span>';
+    makeDraggable(card, function () { return { isNew: true, label: a.name, spawn: function () { return newAction(a.id, a.name, kind); } }; });
+    body.appendChild(card);
+  });
+
+  if (paletteTab === 'native') {
+    const filteredReserved = RESERVED_MENU_COMMANDS.filter(function (a) { return a.name.toLowerCase().indexOf(q) !== -1 || a.id.indexOf(q) !== -1; });
+    if (filteredReserved.length) {
+      const label = document.createElement('div');
+      label.className = 'palette-note';
+      label.textContent = 'Reserved commands (exist only inside menus, not in the action list)';
+      body.appendChild(label);
+      filteredReserved.forEach(function (a) {
+        const card = document.createElement('div');
+        card.className = 'palette-card';
+        card.innerHTML = '<span class="badge badge-reserved">Reserved</span>' +
+          '<span class="card-title">' + escapeHtml(a.name) + '</span>' +
+          '<span class="cmd-id">' + escapeHtml(a.id) + '</span>';
+        makeDraggable(card, function () { return { isNew: true, label: a.name, spawn: function () { return newAction(a.id, a.name, 'native'); } }; });
+        body.appendChild(card);
+      });
+    }
+  }
+}
+
+function elementCard(label, badgeCls, spawnFn, disabled) {
+  const card = document.createElement('div');
+  card.className = 'palette-card' + (disabled ? ' disabled' : '');
+  card.innerHTML = '<span class="badge ' + badgeCls + '">' + label + '</span>';
+  if (!disabled) makeDraggable(card, function () { return { isNew: true, label: label, spawn: spawnFn }; });
+  return card;
+}
+
+/* ===================== Anteprima menu (flyout) ===================== */
+function buildFlyoutLevel(items) {
+  const wrap = document.createElement('div');
+  wrap.className = 'flyout-menu';
+  items.forEach(function (node) {
+    if (node.type === 'separator') { const hr = document.createElement('div'); hr.className = 'flyout-sep'; wrap.appendChild(hr); return; }
+    if (node.type === 'header') { const h = document.createElement('div'); h.className = 'flyout-header'; h.textContent = node.text; wrap.appendChild(h); return; }
+    const li = document.createElement('div'); li.className = 'flyout-item';
+    let label = node.text; let childItems = null;
+    if (node.type === 'submenu') { label = node.text; childItems = node.children; }
+    if (node.type === 'group') { const g = state.groups[node.groupId]; label = g ? g.name : '(group)'; childItems = g ? g.items : []; }
+    li.textContent = label + (childItems ? '  ▸' : '');
+    if (childItems) {
+      const sub = buildFlyoutLevel(childItems);
+      sub.classList.add('flyout-sub');
+      li.appendChild(sub);
+      li.addEventListener('mouseenter', function () {
+        // chiude solo i sottomenu FRATELLI (stesso livello), mai quelli antenati — altrimenti
+        // aprire un sottomenu dentro un altro chiuderebbe anche quello padre, facendo sparire tutto
+        wrap.querySelectorAll(':scope > .flyout-item > .flyout-sub.open').forEach(function (s) { if (s !== sub) s.classList.remove('open'); });
+        sub.classList.add('open');
+        positionFlyoutSub(sub);
+      });
+    }
+    wrap.appendChild(li);
+  });
+  return wrap;
+}
+function positionFlyoutSub(sub) {
+  // Sempre position:fixed, non solo quando serve il clamp: da quando .flyout-menu ha
+  // overflow-y:auto (per lo scroll sui menu lunghi), il CSS forza anche overflow-x ad "auto"
+  // (regola del browser: se un asse ha overflow diverso da "visible" e l'altro no, quello
+  // "visible" diventa "auto" anche lui) — quindi da position:absolute il sottomenu verrebbe
+  // tagliato dal genitore invece di uscire a destra. position:fixed non viene mai tagliato
+  // dall'overflow di un genitore (finché nessun antenato usa transform), quindi lo evita del tutto.
+  sub.style.position = 'fixed';
+  sub.style.left = '0px'; sub.style.top = '0px';
+  const li = sub.parentElement;
+  const liRect = li.getBoundingClientRect();
+  const subRect = sub.getBoundingClientRect();
+  const margin = 8;
+  let left = liRect.right;
+  let top = liRect.top - 6;
+  if (left + subRect.width > window.innerWidth - margin) left = liRect.left - subRect.width;
+  if (left < margin) left = margin;
+  if (top + subRect.height > window.innerHeight - margin) top -= (top + subRect.height - (window.innerHeight - margin));
+  if (top < margin) top = margin;
+  sub.style.left = left + 'px';
+  sub.style.top = top + 'px';
+}
+function clampToViewport(el, margin) {
+  margin = margin || 8;
+  const rect = el.getBoundingClientRect();
+  let left = rect.left, top = rect.top;
+  if (rect.right > window.innerWidth - margin) left -= (rect.right - (window.innerWidth - margin));
+  if (rect.bottom > window.innerHeight - margin) top -= (rect.bottom - (window.innerHeight - margin));
+  if (left < margin) left = margin;
+  if (top < margin) top = margin;
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+}
+function showFlyoutMenu(items, x, y) {
+  closeFlyoutMenu();
+  const menu = buildFlyoutLevel(items);
+  menu.classList.add('flyout-root');
+  menu.style.left = x + 'px'; menu.style.top = y + 'px';
+  document.body.appendChild(menu);
+  clampToViewport(menu);
+  document.getElementById('flyout-overlay').classList.add('active');
+}
+function closeFlyoutMenu() {
+  document.querySelectorAll('.flyout-root').forEach(function (el) { el.remove(); });
+  document.getElementById('flyout-overlay').classList.remove('active');
+}
+
+function wireStaticEvents() {
+  document.getElementById('btn-set-reaper-dir').onclick = setReaperDirectory;
+  document.getElementById('btn-load-starter').onclick = loadStarterFile;
+  document.getElementById('btn-export-menu').onclick = function (e) {
+    e.stopPropagation();
+    document.getElementById('export-dropdown').classList.toggle('open');
+  };
+  document.querySelectorAll('.export-dropdown [data-action]').forEach(function (b) {
+    b.onclick = function (e) {
+      e.stopPropagation();
+      document.getElementById('export-dropdown').classList.remove('open');
+      const action = b.dataset.action;
+      if (action === 'default') saveMenuFile();
+      else if (action === 'as-set') saveMenuFileAs('set');
+      else if (action === 'as-single') saveMenuFileAs('single');
+    };
+  });
+  document.addEventListener('click', function () {
+    document.getElementById('export-dropdown').classList.remove('open');
+  });
+  document.getElementById('section-search').oninput = renderSectionList;
+  document.getElementById('btn-new-section').onclick = openNewSectionModal;
+  document.getElementById('new-section-cancel').onclick = closeNewSectionModal;
+  document.getElementById('new-section-confirm').onclick = confirmNewSection;
+  document.getElementById('new-section-confirm-all').onclick = confirmAllNewSections;
+  document.getElementById('palette-search').oninput = renderPalette;
+  document.querySelectorAll('.palette-tab').forEach(function (t) { t.onclick = function () { paletteTab = t.dataset.tab; renderPalette(); }; });
+  document.getElementById('flyout-overlay').onclick = closeFlyoutMenu;
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeFlyoutMenu(); });
+  document.getElementById('sidebar-toggle').onclick = toggleSidebar;
+  document.getElementById('palette-toggle').onclick = togglePalette;
+  document.getElementById('btn-reset-all').onclick = resetEverything;
+  document.getElementById('btn-help').onclick = function () {
+    document.getElementById('help-content').innerHTML = (typeof HELP_HTML !== 'undefined') ? HELP_HTML : '<p>Help content not found (Data/help-content.js missing).</p>';
+    document.getElementById('help-overlay').classList.add('open');
+  };
+  document.getElementById('help-close').onclick = function () {
+    document.getElementById('help-overlay').classList.remove('open');
+  };
+  document.getElementById('help-overlay').onclick = function (e) {
+    if (e.target.id === 'help-overlay') document.getElementById('help-overlay').classList.remove('open');
+  };
+  if (!hasDirAccess) document.getElementById('fsa-warning').style.display = 'flex';
+}
+
+function toggleSidebar() {
+  const el = document.getElementById('sidebar');
+  const collapsed = el.classList.toggle('collapsed');
+  document.getElementById('sidebar-toggle').textContent = collapsed ? '›' : '‹';
+}
+function togglePalette() {
+  const el = document.getElementById('palette');
+  const collapsed = el.classList.toggle('collapsed');
+  document.getElementById('palette-toggle').textContent = collapsed ? '‹' : '›';
+}
+
+async function init() {
+  wireStaticEvents();
+  await tryRestoreAutosave();
+  await initHandles();
+  renderAll();
+}
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
